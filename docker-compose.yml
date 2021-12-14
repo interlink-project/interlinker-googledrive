@@ -1,0 +1,44 @@
+version: "3.3"
+services:
+  googledrive:
+    image: 'googledrive:${TAG-latest}'
+    container_name: googledrive-wrapper
+    env_file:
+      - .env
+    environment:
+      - SERVER_NAME=${DOMAIN?Variable not set}
+      - SERVER_HOST=https://${DOMAIN?Variable not set}
+      - PORT=${GOOGLEDRIVE_PORT}
+
+      # Allow explicit env var override for tests
+    depends_on:
+      - db
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_DEV: ${INSTALL_DEV-false}
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
+        - traefik.http.routers.${STACK_NAME?Variable not set}-googledrive-http.rule=PathPrefix(`/googledrive`)
+        - traefik.http.services.${STACK_NAME?Variable not set}-googledrive.loadbalancer.server.port=${GOOGLEDRIVE_PORT}
+    networks:
+      - traefik-public
+      - default
+  
+  mongodb:
+    image: bitnami/mongodb:latest
+    container_name: googledrive-mongodb
+    environment:
+      - MONGODB_USERNAME
+      - MONGODB_PASSWORD
+      - MONGODB_DATABASE
+      - MONGODB_ROOT_PASSWORD
+    networks:
+      - default
+
+networks:
+  traefik-public:
+    external: true
