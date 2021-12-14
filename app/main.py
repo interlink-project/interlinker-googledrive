@@ -9,9 +9,10 @@ import os
 from fastapi import File, UploadFile, APIRouter
 from app.google import clean, create_file, copy_file, get_files
 
+ROOT_PATH = "/googledrive"
 
 app = FastAPI(
-    title="Google Drive API Wrapper", openapi_url=f"/openapi.json", docs_url="/docs", root_path="/googledrive"
+    title="Google Drive API Wrapper", openapi_url=f"/openapi.json", docs_url="/docs", root_path=ROOT_PATH
 )
 
 try:
@@ -41,15 +42,15 @@ def repetitive_task() -> None:
 """
 
 
-apirouter = APIRouter()
-
-@apirouter.get("/")
+@app.get("/")
 def main():
-    return RedirectResponse(url="/googledrive/docs")
+    return RedirectResponse(url=f"{ROOT_PATH}/docs")
 
-@apirouter.get("/healthcheck")
+@app.get("/healthcheck")
 def healthcheck():
     return True
+
+apirouter = APIRouter()
 
 @apirouter.get("/assets/real", response_description="Get real files")
 async def get_real_assets():
@@ -115,7 +116,7 @@ async def delete_asset(id: str):
     raise HTTPException(status_code=404, detail="Asset {id} not found")
 
 @apirouter.get(
-    "/assets/{id}/gui", response_description="Clone specific asset"
+    "/assets/{id}/gui", response_description="GUI for specific asset"
 )
 async def gui_asset(id: str):
     if (asset := await db["assets"].find_one({"_id": id})) is not None:
