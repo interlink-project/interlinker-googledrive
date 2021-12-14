@@ -8,7 +8,7 @@ services:
     environment:
       - SERVER_NAME=${DOMAIN?Variable not set}
       - SERVER_HOST=https://${DOMAIN?Variable not set}
-      - PORT=${GOOGLEDRIVE_PORT}
+      - PORT=8921
 
       # Allow explicit env var override for tests
     depends_on:
@@ -21,9 +21,8 @@ services:
     deploy:
       labels:
         - traefik.enable=true
-        - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
+        - traefik.docker.network=traefik-public
         - traefik.http.routers.${STACK_NAME?Variable not set}-googledrive-http.rule=PathPrefix(`/googledrive`)
-        - traefik.http.services.${STACK_NAME?Variable not set}-googledrive.loadbalancer.server.port=${GOOGLEDRIVE_PORT}
         - traefik.http.routers.${STACK_NAME?Variable not set}-googledrive-http.middlewares=googledrive-stripprefix
         - traefik.http.middlewares.googledrive-stripprefix.stripprefix.prefixes=/googledrive
     networks:
