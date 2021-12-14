@@ -1,16 +1,25 @@
 from fastapi import FastAPI, Body, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, Field, EmailStr
-from bson import ObjectId
-from typing import Optional, List
+from app.clean import clean
 from app.config import settings
 from starlette.middleware.cors import CORSMiddleware
 from app.database import db
+from fastapi.responses import RedirectResponse
+import os
+from fastapi import File, UploadFile
+from app.google import create_file, copy_file, get_files
 
 app = FastAPI(
     title="Google Drive API Wrapper", openapi_url=f"{settings.API_V1_STR}/openapi.json", docs_url="/googledrive/docs"
 )
+
+try:
+    os.mkdir("tmp")
+except Exception as e:
+    pass
+
+clean()
 
 # Set all CORS enabled origins
 if settings.BACKEND_CORS_ORIGINS:
@@ -29,64 +38,6 @@ def repetitive_task() -> None:
     pass
     # clean(db)
 
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid objectid")
-        return ObjectId(v)
-
-    @classmethod
-    def __modify_schema__(cls, field_schema):
-        field_schema.update(type="string")
-
-
-class StudentModel(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    name: str = Field(...)
-    email: EmailStr = Field(...)
-    course: str = Field(...)
-    gpa: float = Field(..., le=4.0)
-
-    class Config:
-        allow_population_by_field_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
-        schema_extra = {
-            "example": {
-                "name": "Jane Doe",
-                "email": "jdoe@example.com",
-                "course": "Experiments, Science, and Fashion in Nanophotonics",
-                "gpa": "3.0",
-            }
-        }
-
-
-class UpdateStudentModel(BaseModel):
-    name: Optional[str]
-    email: Optional[EmailStr]
-    course: Optional[str]
-    gpa: Optional[float]
-
-    class Config:
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
-        schema_extra = {
-            "example": {
-                "name": "Jane Doe",
-                "email": "jdoe@example.com",
-                "course": "Experiments, Science, and Fashion in Nanophotonics",
-                "gpa": "3.0",
-            }
-        }
-
-
-from fastapi.responses import RedirectResponse
-
 @app.get("/googledrive")
 def main():
     return RedirectResponse(url="/googledrive/docs")
@@ -95,56 +46,75 @@ def main():
 def healthcheck():
     return True
 
-@app.post("/googledrive/api/v1/students/", response_description="Add new student", response_model=StudentModel)
-async def create_student(student: StudentModel = Body(...)):
-    student = jsonable_encoder(student)
-    new_student = await db["students"].insert_one(student)
-    created_student = await db["students"].find_one({"_id": new_student.inserted_id})
-    return JSONResponse(status_code=status.HTTP_201_CREATED, content=created_student)
+@app.get("/googledrive/api/v1/assets/real", response_description="Get real files")
+async def get_real_assets():
+    return JSONResponse(status_code=status.HTTP_200_OK, content=get_files())
+
+
+@app.post("/googledrive/api/v1/assets/", response_description="Add new asset")
+async def create_asset(file: UploadFile = File(...)):
+    file_name = os.getcwd()+"/tmp/"+file.filename.replace(" ", "-")
+    with open(file_name,'wb+') as f:
+        f.write(file.file.read())
+        f.close()
+    
+    file = create_file(file_name, "Copy")
+    file["_id"] = file["id"]
+    del file["id"]
+    asset = jsonable_encoder(file)
+    new_asset = await db["assets"].insert_one(asset)
+    created_asset = await db["assets"].find_one({"_id": new_asset.inserted_id})
+    return JSONResponse(status_code=status.HTTP_201_CREATED, content=created_asset)
 
 
 @app.get(
-    "/googledrive/api/v1/students/", response_description="List all students", response_model=List[StudentModel]
+    "/googledrive/api/v1/assets/", response_description="List all assets"
 )
-async def list_students():
-    students = await db["students"].find().to_list(1000)
-    return students
+async def list_assets():
+    assets = await db["assets"].find().to_list(1000)
+    return JSONResponse(status_code=status.HTTP_200_OK, content=assets)
 
 
 @app.get(
-    "/googledrive/api/v1/students/{id}", response_description="Get a single student", response_model=StudentModel
+    "/googledrive/api/v1/assets/{id}", response_description="Get a single asset"
 )
-async def show_student(id: str):
-    if (student := await db["students"].find_one({"_id": id})) is not None:
-        return student
+async def show_asset(id: str):
+    if (asset := await db["assets"].find_one({"_id": id})) is not None:
+            return JSONResponse(status_code=status.HTTP_200_OK, content=asset)
 
-    raise HTTPException(status_code=404, detail=f"Student {id} not found")
+    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
+@app.post(
+    "/googledrive/api/v1/assets/{id}/clone", response_description="Clone specific asset"
+)
+async def clone_asset(id: str):
+    if (asset := await db["assets"].find_one({"_id": id})) is not None:
+        file = copy_file("newTitle", id)
+        file["_id"] = file["id"]
+        del file["id"]
+        asset = jsonable_encoder(file)
+        new_asset = await db["assets"].insert_one(asset)
+        created_asset = await db["assets"].find_one({"_id": new_asset.inserted_id})
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content=created_asset)
 
-@app.put("/googledrive/api/v1/students/{id}", response_description="Update a student", response_model=StudentModel)
-async def update_student(id: str, student: UpdateStudentModel = Body(...)):
-    student = {k: v for k, v in student.dict().items() if v is not None}
-
-    if len(student) >= 1:
-        update_result = await db["students"].update_one({"_id": id}, {"$set": student})
-
-        if update_result.modified_count == 1:
-            if (
-                updated_student := await db["students"].find_one({"_id": id})
-            ) is not None:
-                return updated_student
-
-    if (existing_student := await db["students"].find_one({"_id": id})) is not None:
-        return existing_student
-
-    raise HTTPException(status_code=404, detail=f"Student {id} not found")
+    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
 
-@app.delete("/googledrive/api/v1/students/{id}", response_description="Delete a student")
-async def delete_student(id: str):
-    delete_result = await db["students"].delete_one({"_id": id})
+@app.delete("/googledrive/api/v1/assets/{id}", response_description="Delete a asset")
+async def delete_asset(id: str):
+    delete_result = await db["assets"].delete_one({"_id": id})
 
     if delete_result.deleted_count == 1:
         return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
 
-    raise HTTPException(status_code=404, detail=f"Student {id} not found")
+    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
+
+@app.get(
+    "/googledrive/api/v1/assets/{id}/gui", response_description="Clone specific asset"
+)
+async def gui_asset(id: str):
+    if (asset := await db["assets"].find_one({"_id": id})) is not None:
+        
+        return RedirectResponse(url=asset["webViewLink"])
+
+    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
