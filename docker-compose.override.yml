@@ -19,3 +19,5 @@ services:
         set}-googledrive-http.rule=PathPrefix(`/googledrive`)
       - traefik.http.services.${STACK_NAME?Variable not
         set}-googledrive.loadbalancer.server.port=${GOOGLEDRIVE_PORT}
+      - traefik.http.routers.${STACK_NAME?Variable not set}-googledrive-http.middlewares=googledrive-stripprefix
+      - traefik.http.middlewares.googledrive-stripprefix.stripprefix.prefixes=/googledrive
