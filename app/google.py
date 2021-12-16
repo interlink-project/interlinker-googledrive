@@ -3,6 +3,7 @@ from apiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 from apiclient.http import MediaFileUpload
 import magic
+from app.model import fields
 
 scope = ['https://www.googleapis.com/auth/drive']
 
@@ -12,7 +13,6 @@ credentials = ServiceAccountCredentials.from_json_keyfile_name(
 # https://developers.google.com/drive/api/v3/quickstart/python
 service = build('drive', 'v3', credentials=credentials)
 
-fields = "id, name, webContentLink, webViewLink, thumbnailLink, version, mimeType, size, iconLink, createdTime, modifiedTime"
 
 def get_files(pageSize = None):
     # https://developers.google.com/drive/api/v3/reference/files

@@ -1,33 +1,28 @@
-from fastapi import FastAPI, Body, HTTPException, status
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
-from app.config import settings
-from starlette.middleware.cors import CORSMiddleware
-from app.database import db
-from fastapi.responses import RedirectResponse
 import os
-from fastapi import File, UploadFile, APIRouter
-from app.google import clean, create_file, copy_file, get_files
+from typing import List
 
-ROOT_PATH = "/googledrive"
+from fastapi import APIRouter, Body, FastAPI, File, HTTPException, UploadFile, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse, RedirectResponse
+from starlette.middleware.cors import CORSMiddleware
+
+import app.crud as crud
+from app.config import settings
+from app.google import copy_file, create_file, delete_file, get_files
+from app.model import AssetSchema
+
+#ROOT_PATH = "/googledrive"
+ROOT_PATH = ""
 
 app = FastAPI(
     title="Google Drive API Wrapper", openapi_url=f"/openapi.json", docs_url="/docs", root_path=ROOT_PATH
 )
-
-try:
-    os.mkdir("tmp")
-except Exception as e:
-    pass
-
-clean()
 
 # Set all CORS enabled origins
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
-        # localhost only
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -41,89 +36,101 @@ def repetitive_task() -> None:
     # clean(db)
 """
 
+mainrouter = APIRouter()
 
-@app.get("/")
+@mainrouter.get("/")
 def main():
     return RedirectResponse(url=f"{ROOT_PATH}/docs")
 
-@app.get("/healthcheck")
+@mainrouter.get("/healthcheck")
 def healthcheck():
     return True
 
-apirouter = APIRouter()
+specificrouter = APIRouter()
 
-@apirouter.get("/assets/real", response_description="Get real files")
+@specificrouter.get("/clean", response_description="Clean assets")
+async def clean_files():
+    assets = await crud.get_all()
+    for asset in assets:
+        delete_file(asset["_id"])
+        crud.delete(asset["_id"])
+    return JSONResponse(status_code=status.HTTP_200_OK)
+
+@specificrouter.get("/files/real", response_description="Get real files")
 async def get_real_assets():
     return JSONResponse(status_code=status.HTTP_200_OK, content=get_files())
 
+@specificrouter.get("/files/delete", response_description="Delete unused files")
+async def delete_unused_files():
+    assets = await crud.get_all()
+    assets_ids = [asset["_id"] for asset in assets]
+    files = get_files()
+    files_ids = [file["id"] for file in files]
+    matches = [el for el in files_ids if el not in assets_ids]
+    for id in matches:
+        delete_file(id)
+    return JSONResponse(status_code=status.HTTP_200_OK)
 
-@apirouter.post("/assets/", response_description="Add new asset")
+defaultrouter = APIRouter()
+
+@defaultrouter.post("/assets/", response_description="Add new asset", response_model=AssetSchema, status_code=201)
 async def create_asset(file: UploadFile = File(...)):
     file_name = os.getcwd()+"/tmp/"+file.filename.replace(" ", "-")
     with open(file_name,'wb+') as f:
         f.write(file.file.read())
         f.close()
     
-    file = create_file(file_name, "Copy")
-    file["_id"] = file["id"]
-    del file["id"]
-    asset = jsonable_encoder(file)
-    new_asset = await db["assets"].insert_one(asset)
-    created_asset = await db["assets"].find_one({"_id": new_asset.inserted_id})
-    return JSONResponse(status_code=status.HTTP_201_CREATED, content=created_asset)
+    googlefile = create_file(file_name, "Copy")
+    return await crud.create(googlefile)
 
 
-@apirouter.get(
-    "/assets/", response_description="List all assets"
+@defaultrouter.get(
+    "/assets/", response_description="List all assets", response_model=List[AssetSchema]
 )
 async def list_assets():
-    assets = await db["assets"].find().to_list(1000)
-    return JSONResponse(status_code=status.HTTP_200_OK, content=assets)
+    return await crud.get_all()
 
 
-@apirouter.get(
-    "/assets/{id}", response_description="Get a single asset"
+@defaultrouter.get(
+    "/assets/{id}", response_description="Get a single asset", response_model=AssetSchema
 )
 async def show_asset(id: str):
-    if (asset := await db["assets"].find_one({"_id": id})) is not None:
-            return JSONResponse(status_code=status.HTTP_200_OK, content=asset)
+    asset = await crud.get(id)
+    if asset is not None:
+        return asset
 
     raise HTTPException(status_code=404, detail="Asset {id} not found")
 
-@apirouter.post(
-    "/assets/{id}/clone", response_description="Clone specific asset"
+@defaultrouter.post(
+    "/assets/{id}/clone", response_description="Clone specific asset", response_model=AssetSchema, status_code=201
 )
 async def clone_asset(id: str):
-    if (asset := await db["assets"].find_one({"_id": id})) is not None:
-        file = copy_file("newTitle", id)
-        file["_id"] = file["id"]
-        del file["id"]
-        asset = jsonable_encoder(file)
-        new_asset = await db["assets"].insert_one(asset)
-        created_asset = await db["assets"].find_one({"_id": new_asset.inserted_id})
-        return JSONResponse(status_code=status.HTTP_201_CREATED, content=created_asset)
+    if crud.get(id) is not None:
+        googlefile = copy_file("newTitle", id)
+        return await crud.create(googlefile)
 
     raise HTTPException(status_code=404, detail="Asset {id} not found")
 
 
-@apirouter.delete("/assets/{id}", response_description="Delete a asset")
+@defaultrouter.delete("/assets/{id}", response_description="Delete an asset")
 async def delete_asset(id: str):
-    delete_result = await db["assets"].delete_one({"_id": id})
-
-    if delete_result.deleted_count == 1:
-        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
+    if crud.get(id) is not None:
+        delete_result = crud.delete(id)
+        if delete_result.deleted_count == 1:
+            return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
 
     raise HTTPException(status_code=404, detail="Asset {id} not found")
 
-@apirouter.get(
+@defaultrouter.get(
     "/assets/{id}/gui", response_description="GUI for specific asset"
 )
 async def gui_asset(id: str):
-    if (asset := await db["assets"].find_one({"_id": id})) is not None:
-        
+    asset = await crud.get(id)
+    if asset is not None:
         return RedirectResponse(url=asset["webViewLink"])
 
     raise HTTPException(status_code=404, detail="Asset {id} not found")
 
-
-app.include_router(apirouter, prefix=settings.API_V1_STR)
+app.include_router(mainrouter, tags=["main"])
+app.include_router(defaultrouter, prefix=settings.API_V1_STR, tags=["default"])
+app.include_router(specificrouter, prefix=settings.API_V1_STR, tags=["specific"])

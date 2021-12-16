@@ -1,5 +1,4 @@
 import logging
-
 from tenacity import after_log, before_log, retry, stop_after_attempt, wait_fixed
 
 # google
@@ -50,7 +49,7 @@ def waitForDrive() -> None:
 def main() -> None:
     logger.info("Initializing service")
     waitForDatabase()
-    # waitForDrive()
+    # waitForDrive()
     logger.info("Services finished initializing")
 
 

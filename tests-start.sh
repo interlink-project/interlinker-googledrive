@@ -1,6 +1,13 @@
 #! /usr/bin/env bash
 set -e
 
-python /app/app/pre_start.py
+if [ $(uname -s) = "Linux" ]; then
+    echo "Remove __pycache__ files"
+    sudo find . -type d -name __pycache__ -exec rm -r {} \+
+fi
 
-bash /app/app/scripts/test.sh "$@"
+docker-compose down -v --remove-orphans # Remove possibly previous broken stacks left hanging after an error
+docker-compose build
+docker-compose up -d
+#docker-compose exec googledrive pytest --cov=app --cov-report=term-missing app/tests
+docker-compose exec googledrive pytest app/tests
