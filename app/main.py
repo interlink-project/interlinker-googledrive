@@ -11,11 +11,10 @@ from app.config import settings
 from app.google import copy_file, create_file, delete_file, get_files
 from app.model import AssetSchema
 
-#ROOT_PATH = "/googledrive"
-ROOT_PATH = ""
+BASE_PATH = os.getenv("BASE_PATH", "")
 
 app = FastAPI(
-    title="Google Drive API Wrapper", openapi_url=f"/openapi.json", docs_url="/docs", root_path=ROOT_PATH
+    title="Google Drive API Wrapper", openapi_url=f"/openapi.json", docs_url="/docs", root_path=BASE_PATH
 )
 
 # Set all CORS enabled origins
@@ -40,7 +39,7 @@ mainrouter = APIRouter()
 
 @mainrouter.get("/")
 def main():
-    return RedirectResponse(url=f"{ROOT_PATH}/docs")
+    return RedirectResponse(url=f"{BASE_PATH}/docs")
 
 @mainrouter.get("/healthcheck")
 def healthcheck():
@@ -53,7 +52,7 @@ async def clean_files():
     assets = await crud.get_all()
     for asset in assets:
         delete_file(asset["_id"])
-        crud.delete(asset["_id"])
+        await crud.delete(asset["_id"])
     return JSONResponse(status_code=status.HTTP_200_OK)
 
 @specificrouter.get("/files/real", response_description="Get real files")
@@ -115,7 +114,7 @@ async def clone_asset(id: str):
 @defaultrouter.delete("/assets/{id}", response_description="Delete an asset")
 async def delete_asset(id: str):
     if crud.get(id) is not None:
-        delete_result = crud.delete(id)
+        delete_result = await crud.delete(id)
         if delete_result.deleted_count == 1:
             return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
 

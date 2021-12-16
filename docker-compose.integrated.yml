@@ -6,7 +6,7 @@ services:
       - .:/app
     environment:
       - SERVER_HOST=http://${DOMAIN?Variable not set}
-      - BASE_PATH=
+      - BASE_PATH=/googledrive
       - PORT
     build:
       context: .
