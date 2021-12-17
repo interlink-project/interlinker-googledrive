@@ -3,6 +3,7 @@ import json
 import pytest
 
 from app import crud
+from app.google import delete_file
 
 # https://testdriven.io/blog/fastapi-crud/
 # https://github.com/testdrivenio/fastapi-crud-async/blob/master/src/tests/test_notes.py
@@ -31,6 +32,9 @@ def test_create_asset(test_app, monkeypatch):
     }
 
     async def mock_create(payload):
+        # Google file has been created (delete it)
+        google_id = payload["id"]
+        delete_file(google_id)
         return {
             "_id": "dsasadas",
             "webContentLink": "sdafasdfsadfsadf",
