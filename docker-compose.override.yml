@@ -2,6 +2,7 @@ version: "3.3"
 services:
 
   googledrive:
+    container_name: googledrive-solo
     volumes:
       - .:/app
     environment:

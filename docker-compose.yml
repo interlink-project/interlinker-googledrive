@@ -2,7 +2,7 @@ version: "3.3"
 services:
   googledrive:
     image: 'googledrive:${TAG-latest}'
-    container_name: googledrive-wrapper
+    container_name: googledrive-production
     env_file:
       - .env
     environment:
