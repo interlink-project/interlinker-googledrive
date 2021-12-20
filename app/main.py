@@ -41,7 +41,7 @@ mainrouter = APIRouter()
 def main():
     return RedirectResponse(url=f"{BASE_PATH}/docs")
 
-@mainrouter.get("/healthcheck")
+@mainrouter.get("/healthcheck/")
 def healthcheck():
     return True
 
