@@ -1,7 +1,7 @@
 version: "3.3"
 services:
-
   googledrive:
+    image: 'googledrivedev:${TAG-latest}'
     container_name: googledrive-solo
     volumes:
       - .:/app
