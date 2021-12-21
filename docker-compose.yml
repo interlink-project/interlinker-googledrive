@@ -9,10 +9,10 @@ services:
       - SERVER_NAME=${DOMAIN?Variable not set}
       - SERVER_HOST=https://${DOMAIN?Variable not set}
       - PORT=8921
-
       # Allow explicit env var override for tests
     depends_on:
-      - db
+      mongodb:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile
@@ -22,13 +22,15 @@ services:
       labels:
         - traefik.enable=true
         - traefik.docker.network=traefik-public
-        - traefik.http.routers.${STACK_NAME?Variable not set}-googledrive-http.rule=PathPrefix(`/googledrive`)
-        - traefik.http.routers.${STACK_NAME?Variable not set}-googledrive-http.middlewares=googledrive-stripprefix
+        - traefik.http.routers.${STACK_NAME?Variable not
+          set}-googledrive-http.rule=PathPrefix(`/googledrive`)
+        - traefik.http.routers.${STACK_NAME?Variable not
+          set}-googledrive-http.middlewares=googledrive-stripprefix
         - traefik.http.middlewares.googledrive-stripprefix.stripprefix.prefixes=/googledrive
     networks:
       - traefik-public
       - default
-  
+
   mongodb:
     image: bitnami/mongodb:latest
     container_name: googledrive-mongodb
@@ -39,6 +41,13 @@ services:
       - MONGODB_ROOT_PASSWORD
     networks:
       - default
+    healthcheck:
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongo admin -u root -p
+        $MONGODB_ROOT_PASSWORD --quiet | grep 1
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
 networks:
   traefik-public:
