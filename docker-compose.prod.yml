@@ -7,47 +7,29 @@ services:
       - .env
     environment:
       - SERVER_NAME=${DOMAIN?Variable not set}
-      - SERVER_HOST=https://${DOMAIN?Variable not set}
-      - PORT=8921
-      # Allow explicit env var override for tests
-    depends_on:
-      mongodb:
-        condition: service_healthy
+      - SERVER_HOST=https://${DOMAIN?Variable not set}/googledrive
+      - PORT
+      - BASE_PATH=/googledrive
+      - MONGODB_URL=mongoatlasurl
+    restart: always
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        INSTALL_DEV: ${INSTALL_DEV-false}
+      target: prod
     deploy:
       labels:
         - traefik.enable=true
         - traefik.docker.network=traefik-public
         - traefik.http.routers.${STACK_NAME?Variable not
           set}-googledrive-http.rule=PathPrefix(`/googledrive`)
+        - traefik.http.services.${STACK_NAME?Variable not
+          set}-googledrive.loadbalancer.server.port=${PORT}
         - traefik.http.routers.${STACK_NAME?Variable not
           set}-googledrive-http.middlewares=googledrive-stripprefix
         - traefik.http.middlewares.googledrive-stripprefix.stripprefix.prefixes=/googledrive
     networks:
       - traefik-public
-      - default
-
-  mongodb:
-    image: bitnami/mongodb:latest
-    container_name: googledrive-mongodb
-    environment:
-      - MONGODB_USERNAME
-      - MONGODB_PASSWORD
-      - MONGODB_DATABASE
-      - MONGODB_ROOT_PASSWORD
-    networks:
-      - default
-    healthcheck:
-      test: echo 'db.runCommand({serverStatus:1}).ok' | mongo admin -u root -p
-        $MONGODB_ROOT_PASSWORD --quiet | grep 1
-      interval: 10s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+ 
 
 networks:
   traefik-public:
