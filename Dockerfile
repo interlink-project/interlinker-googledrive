@@ -8,18 +8,27 @@ RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-
     poetry config virtualenvs.create false
 
 # Copy poetry.lock* in case it doesn't exist in the repo
-COPY pyproject.toml poetry.lock* /app/
-
-# Allow installing dev dependencies to run tests
-ARG INSTALL_DEV=false
-RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then poetry install --no-root ; else poetry install --no-root --no-dev ; fi"
+COPY ./pyproject.toml ./poetry.lock* /app/
+RUN pip install --no-cache-dir Werkzeug python-magic google-api-python-client google-auth-httplib2 google-auth-oauthlib oauth2client
 
 COPY . /app
 ENV PYTHONPATH=/app
 
-RUN pip install --no-cache-dir Werkzeug python-magic google-api-python-client google-auth-httplib2 google-auth-oauthlib oauth2client
+FROM builder as dev
+
+RUN poetry install --no-root
 
 EXPOSE 80
 
-RUN chmod +x ./start.sh
-CMD ["bash", "./start.sh"]
+COPY ./start-dev.sh ./start-dev.sh
+RUN chmod +x ./start-dev.sh
+CMD ["bash", "./start-dev.sh"]
+
+FROM builder as prod
+
+RUN poetry install --no-root --no-dev
+EXPOSE 80
+
+COPY ./start-prod.sh ./start-prod.sh
+RUN chmod +x ./start-prod.sh
+CMD ["bash", "./start-prod.sh"]
