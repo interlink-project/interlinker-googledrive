@@ -1,9 +1,12 @@
 import os
 from typing import List
 
-from fastapi import APIRouter, Body, FastAPI, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Request, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+
 from starlette.middleware.cors import CORSMiddleware
 
 import app.crud as crud
@@ -11,11 +14,14 @@ from app.config import settings
 from app.google import copy_file, create_file, delete_file, get_files
 from app.model import AssetSchema
 
+
 BASE_PATH = os.getenv("BASE_PATH", "")
 
 app = FastAPI(
     title="Google Drive API Wrapper", openapi_url=f"/openapi.json", docs_url="/docs", root_path=BASE_PATH
 )
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Set all CORS enabled origins
 if settings.BACKEND_CORS_ORIGINS:
@@ -129,6 +135,14 @@ async def gui_asset(id: str):
         return RedirectResponse(url=asset["webViewLink"])
 
     raise HTTPException(status_code=404, detail="Asset {id} not found")
+
+
+@defaultrouter.get(
+    "/assets/instantiator/", response_description="Survey creator"
+)
+async def instantiator(request: Request):
+    return templates.TemplateResponse("instantiator.html", {"request": request, "BASE_PATH": BASE_PATH})
+
 
 app.include_router(mainrouter, tags=["main"])
 app.include_router(defaultrouter, prefix=settings.API_V1_STR, tags=["default"])
