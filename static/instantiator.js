@@ -125,22 +125,29 @@ function App() {
 
   const selectFile = async (event) => {
     var file = event.target.files[0]
-    uploadService.upload(file, onUploadProgress).then(res => {
-      console.log(res.data)
+    uploadService.upload(file, onUploadProgress).then(response => {
+      console.log("RESPONSE", response.data);
+      if (window.parent) {
+        window.parent.postMessage({
+          'code': 'asset_created',
+          'message': response.data
+        }, "*");
+      }
       setProgress(0)
     })
   }
 
   return (
-    <React.Fragment>
-        <label htmlFor="contained-button-file">
-          <Input id="contained-button-file" type="file" sx={{ display: "none" }} onChange={selectFile} />
-          <Button variant="contained" component="span" fullWidth >
-            Upload
-          </Button>
-          {progress !== 0 && <LinearProgress color="secondary" variant="determinate" value={progress} />}
-        </label>
-    </React.Fragment>
+    <Container maxWidth="sm">
+      <Box sx={{ my: 4 }}>      <label htmlFor="contained-button-file">
+        <Input id="contained-button-file" type="file" sx={{ display: "none" }} onChange={selectFile} />
+        <Button variant="contained" component="span" fullWidth >
+          Upload
+        </Button>
+        {progress !== 0 && <LinearProgress color="secondary" variant="determinate" value={progress} />}
+      </label>
+      </Box>
+    </Container>
   );
 }
 

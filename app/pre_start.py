@@ -21,8 +21,8 @@ wait_seconds = 10
 )
 def waitForDatabase() -> None:
     try:
-        from app.database import db
-        db["assets"].find_one({"_id": "TEST"})
+        from app.database import collection
+        collection.find_one({"_id": "TEST"})
     except Exception as e:
         logger.error(e)
         raise e
