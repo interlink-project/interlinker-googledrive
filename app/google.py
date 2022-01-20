@@ -1,20 +1,10 @@
 # https://developers.google.com/analytics/devguides/config/mgmt/v3/quickstart/service-py
-from apiclient.discovery import build
-from oauth2client.service_account import ServiceAccountCredentials
 from apiclient.http import MediaFileUpload
 import magic
+import os
 from app.model import fields
 
-scope = ['https://www.googleapis.com/auth/drive']
-
-credentials = ServiceAccountCredentials.from_json_keyfile_name(
-    'credentials.json', scope)
-
-# https://developers.google.com/drive/api/v3/quickstart/python
-service = build('drive', 'v3', credentials=credentials)
-
-
-def get_files(pageSize = None):
+def get_files(service, pageSize = None):
     # https://developers.google.com/drive/api/v3/reference/files
     if pageSize:
         results = service.files().list(
@@ -24,10 +14,10 @@ def get_files(pageSize = None):
     return results.get('files', [])
 
 
-def get_file_by_id(id):
+def get_file_by_id(service, id):
     return service.files().get( fileId=id, fields=fields).execute()
 
-def create_file(path, name):
+def create_file(service, path, name):
     mime = magic.Magic(mime=True)
     mime = mime.from_file(path)
     media = MediaFileUpload(path,
@@ -38,19 +28,24 @@ def create_file(path, name):
     file = service.files().create(body=file_metadata,
                                   media_body=media,
                                   fields=fields).execute()
-    set_public(file["id"])
+    if os.path.isfile(path):
+        os.remove(path)
+    else:    ## Show an error ##
+        raise Exception("Error: %s file not found" % path)
+    
+    set_public(service, file["id"])
     return file
 
-def copy_file(newTitle, id):
+def copy_file(service, newTitle, id):
     file = service.files().copy(
         fileId=id, body={'title': newTitle}, fields=fields).execute()
-    set_public(file["id"])
+    set_public(service, file["id"])
     return file
 
-def delete_file(id):
+def delete_file(service, id):
     return service.files().delete(fileId=id).execute()
 
-def set_public(file_id):
+def set_public(service, file_id):
     user_permission = {
         'type': 'anyone',
         'role': 'writer',
@@ -62,9 +57,9 @@ def set_public(file_id):
     ).execute()
     return perm
 
-def clean():
+def clean(service):
     print("Syncing (cleaning)")
     # Delete all files in drive that are not attached to any DriveAsset obj
-    for i in get_files():
-        delete_file(i["id"])
-    return get_files()
+    for i in get_files(service):
+        delete_file(service, i["id"])
+    return get_files(service)

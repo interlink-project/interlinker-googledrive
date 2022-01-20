@@ -1,6 +1,8 @@
 import logging
-from tenacity import after_log, before_log, retry, stop_after_attempt, wait_fixed
 
+from tenacity import after_log, before_log, retry, stop_after_attempt, wait_fixed
+from app.config import settings
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 # google
 from apiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
@@ -12,7 +14,7 @@ logger = logging.getLogger(__name__)
 max_tries = 60 * 5  # 5 minutes
 wait_seconds = 10
 
-
+client = AsyncIOMotorClient(settings.MONGODB_URL)
 @retry(
     stop=stop_after_attempt(max_tries),
     wait=wait_fixed(wait_seconds),
@@ -21,12 +23,11 @@ wait_seconds = 10
 )
 def waitForDatabase() -> None:
     try:
-        from app.database import collection
+        collection = client[settings.DATABASE_NAME][settings.COLLECTION_NAME]
         collection.find_one({"_id": "TEST"})
     except Exception as e:
         logger.error(e)
         raise e
-
 
 
 @retry(
@@ -44,14 +45,11 @@ def waitForDrive() -> None:
         logger.error(e)
         raise e
 
-
-
 def main() -> None:
     logger.info("Initializing service")
     waitForDatabase()
-    # waitForDrive()
     logger.info("Services finished initializing")
-
+    client.close()
 
 if __name__ == "__main__":
     main()
