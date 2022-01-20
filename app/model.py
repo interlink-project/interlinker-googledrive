@@ -5,6 +5,7 @@ fields = "id, name, webContentLink, webViewLink, thumbnailLink, version, mimeTyp
 
 class AssetSchema(BaseModel):
     id: str = Field(..., alias='_id')
+    temporal: Optional[bool] = True
     name: Optional[str]
     webContentLink: str = Field(..., min_length=3)
     webViewLink: str = Field(..., min_length=3)

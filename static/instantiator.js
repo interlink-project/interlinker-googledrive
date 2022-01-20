@@ -1,5 +1,4 @@
 const {
-  colors,
   CssBaseline,
   ThemeProvider,
   Typography,
@@ -8,17 +7,32 @@ const {
   Box,
   Button,
   Input,
-  SvgIcon,
-  Link,
-  LinearProgress
+  LinearProgress,
+  IconButton,
+  Avatar,
 } = MaterialUI;
 
+var { basepath } = jQuery('#data').data();
 
 const http = axios.create({
   headers: {
     "Content-type": "application/json"
   }
 });
+
+const bytesToSize = (bytes, decimals = 2) => {
+  if (bytes === 0) {
+    return '0 Bytes';
+  }
+
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+};
+
 
 class UploadFilesService {
   upload(file, onUploadProgress) {
@@ -33,9 +47,8 @@ class UploadFilesService {
       onUploadProgress,
     });
   }
-
-  getFiles() {
-    return http.get("/files");
+  confirm(id) {
+    return http.post(`${basepath}/api/v1/assets/${id}/persist/`, null, {});
   }
 }
 
@@ -118,35 +131,171 @@ const theme = createTheme({
 
 function App() {
   const [progress, setProgress] = React.useState(0)
+  const [file, setFile] = React.useState(null)
+  const [iframeKey, setIframeKey] = React.useState(null)
+  const [created, setCreated] = React.useState(null)
 
   var onUploadProgress = (progressEvent) => {
     setProgress(100 * progressEvent.loaded / progressEvent.total)
   }
 
+  React.useEffect(() => {
+    if (window.parent) {
+      window.parent.postMessage({
+        'code': 'initialized',
+      }, "*");
+    }
+  }, [])
+
   const selectFile = async (event) => {
-    var file = event.target.files[0]
-    uploadService.upload(file, onUploadProgress).then(response => {
-      console.log("RESPONSE", response.data);
-      if (window.parent) {
-        window.parent.postMessage({
-          'code': 'asset_created',
-          'message': response.data
-        }, "*");
-      }
+    var f = event.target.files[0]
+
+    uploadService.upload(f, onUploadProgress).then(response => {
+      console.log("RESPONSE UPLOAD", response.data);
+      setFile(response.data)
       setProgress(0)
     })
   }
 
+  const confirmFile = async () => {
+    uploadService.confirm(file._id).then(response => {
+      console.log("RESPONSE CONFIRM", response.data);
+      setCreated(response.data)
+      if (window.parent) {
+        window.parent.postMessage({
+          'code': 'asset_created',
+          'data': response.data
+        }, "*");
+      }
+    })
+  }
+
+  const maxFiles = 1
+
+  // src={file.webViewLink}
+  // src={`https://docs.google.com/gview?url=${file.webContentLink}&embedded=true`}
+
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ my: 4 }}>      <label htmlFor="contained-button-file">
-        <Input id="contained-button-file" type="file" sx={{ display: "none" }} onChange={selectFile} />
-        <Button variant="contained" component="span" fullWidth >
-          Upload
-        </Button>
-        {progress !== 0 && <LinearProgress color="secondary" variant="determinate" value={progress} />}
-      </label>
-      </Box>
+    <Container maxWidth="md">
+
+      <div>
+        {created ?
+          (<Box
+            sx={{
+              maxWidth: 450,
+              mx: 'auto',
+              alignItems: "center"
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              <Avatar
+                src=""
+              />
+            </Box>
+            <Box sx={{ mt: 2 }}>
+              <Typography
+                align='center'
+                color='textPrimary'
+                variant='h3'
+              >
+                Asset created!
+              </Typography>
+            </Box>
+            <Box sx={{ mt: 2 }}>
+              <Typography
+                align='center'
+                color='textSecondary'
+                variant='subtitle1'
+              >
+                The asset is now accessible for this task.
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                mt: 2,
+              }}
+            >
+              <Button
+                color='primary'
+                variant='contained'
+                href={`${basepath}/api/v1/assets/${created._id}/gui`}
+              >
+                Open asset
+              </Button>
+            </Box>
+          </Box>)
+          :
+          file ? (
+            <React.Fragment>
+              <iframe key={iframeKey} style={{ width: "100%", minHeight: "80vh", border: 0 }} src={`https://docs.google.com/gview?url=${file.webContentLink}&embedded=true`} />
+              <Button variant="outlined" fullWidth sx={{ mt: 1 }} onClick={() => setIframeKey(iframeKey + 1)}>Refresh previewer</Button>
+              <Button variant="contained" fullWidth sx={{ mt: 2 }} onClick={confirmFile}>Confirm upload</Button>
+            </React.Fragment>
+          ) : <Box>
+            <label htmlFor="contained-button-file">
+              <Input id="contained-button-file" type="file" sx={{ display: "none" }} onChange={selectFile} />
+              <Box
+                sx={{
+                  alignItems: 'center',
+                  border: 1,
+                  borderRadius: 1,
+                  borderColor: 'divider',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                  outline: 'none',
+                  p: 6,
+                  '&:hover': {
+                    backgroundColor: 'action.hover',
+                    cursor: 'pointer',
+                    opacity: 0.5,
+                  },
+                }}
+              >
+                <Box
+                  sx={{
+                    '& img': {
+                      width: 100,
+                    },
+                  }}
+                >
+                  <img
+                    alt='Select file'
+                    src={`${basepath}/static/icon.svg`}
+                  />
+                </Box>
+                <Box sx={{ p: 2 }}>
+                  <Typography
+                    color='textPrimary'
+                    variant='h6'
+                  >
+                    {`Select file`}
+                  </Typography>
+                  <Box sx={{ mt: 2 }}>
+                    <Typography
+                      color='textPrimary'
+                      variant='body1'
+                    >
+                      {`Drop file${maxFiles && maxFiles === 1 ? '' : 's'}`} or click here
+                    </Typography>
+
+
+                  </Box>
+                </Box>
+              </Box>
+            </label>
+            {progress !== 0 && <LinearProgress color="primary" variant="determinate" value={progress} />}
+          </Box>
+        }
+
+      </div>
     </Container>
   );
 }
