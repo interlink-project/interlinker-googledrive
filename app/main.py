@@ -40,48 +40,27 @@ if settings.BACKEND_CORS_ORIGINS:
 
 mainrouter = APIRouter()
 
+
 @mainrouter.get("/")
 def main():
     return RedirectResponse(url=f"{BASE_PATH}/docs")
+
 
 @mainrouter.get("/healthcheck/")
 def healthcheck():
     return True
 
-specificrouter = APIRouter()
-
-@specificrouter.get("/clean", response_description="Clean assets")
-async def clean_files(collection: AsyncIOMotorCollection = Depends(get_collection), service = Depends(get_service)):
-    assets = await crud.get_all(collection)
-    for asset in assets:
-        delete_file(service, asset["_id"])
-        await crud.delete(collection, asset["_id"])
-    return JSONResponse(status_code=status.HTTP_200_OK)
-
-@specificrouter.get("/files/real", response_description="Get real files")
-async def get_real_assets(service = Depends(get_service)):
-    return JSONResponse(status_code=status.HTTP_200_OK, content=get_files(service))
-
-@specificrouter.get("/files/delete", response_description="Delete unused files")
-async def delete_unused_files(collection: AsyncIOMotorCollection = Depends(get_collection), service = Depends(get_service)):
-    assets = await crud.get_all(collection)
-    assets_ids = [asset["_id"] for asset in assets]
-    files = get_files(service)
-    files_ids = [file["id"] for file in files]
-    matches = [el for el in files_ids if el not in assets_ids]
-    for id in matches:
-        delete_file(service, id)
-    return JSONResponse(status_code=status.HTTP_200_OK)
 
 defaultrouter = APIRouter()
 
+
 @defaultrouter.post("/assets/", response_description="Add new asset", response_model=AssetSchema, status_code=201)
-async def create_asset(file: UploadFile = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service = Depends(get_service)):
+async def create_asset(file: UploadFile = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
     file_name = os.getcwd()+"/tmp/"+file.filename.replace(" ", "-")
-    with open(file_name,'wb+') as f:
+    with open(file_name, 'wb+') as f:
         f.write(file.file.read())
         f.close()
-    
+
     try:
         googlefile = create_file(service, file_name, "Copy")
         return await crud.create(collection, googlefile)
@@ -106,16 +85,6 @@ async def show_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_c
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
-@defaultrouter.post(
-    "/assets/{id}/clone/", response_description="Clone specific asset", response_model=AssetSchema, status_code=201
-)
-async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service = Depends(get_service)):
-    if crud.get(collection, id) is not None:
-        googlefile = copy_file(service, "newTitle", id)
-        return await crud.create(collection, googlefile)
-
-    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
-
 
 @defaultrouter.delete("/assets/{id}", response_description="Delete an asset")
 async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
@@ -126,7 +95,11 @@ async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
-@defaultrouter.get(
+
+integrablerouter = APIRouter()
+
+
+@integrablerouter.get(
     "/assets/{id}/gui/", response_description="GUI for specific asset"
 )
 async def gui_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
@@ -137,7 +110,18 @@ async def gui_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_co
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
 
-@defaultrouter.get(
+@integrablerouter.post(
+    "/assets/{id}/clone/", response_description="Clone specific asset", response_model=AssetSchema, status_code=201
+)
+async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    if crud.get(collection, id) is not None:
+        googlefile = copy_file(service, "newTitle", id)
+        return await crud.create(collection, googlefile)
+
+    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
+
+
+@integrablerouter.get(
     "/assets/instantiator/", response_description="Google Drive asset creator"
 )
 async def instantiator(request: Request):
@@ -145,7 +129,10 @@ async def instantiator(request: Request):
 
 
 # SPECIFIC
-@defaultrouter.post(
+customrouter = APIRouter()
+
+
+@customrouter.post(
     "/assets/{id}/persist/", response_description="Persist a temporal asset"
 )
 async def persist_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
@@ -155,7 +142,35 @@ async def persist_asset(id: str, collection: AsyncIOMotorCollection = Depends(ge
 
     raise HTTPException(status_code=404, detail="Asset {id} not found")
 
+#TODO: Task to remove unused files
+
+@customrouter.get("/clean", response_description="Clean assets")
+async def clean_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    assets = await crud.get_all(collection)
+    for asset in assets:
+        delete_file(service, asset["_id"])
+        await crud.delete(collection, asset["_id"])
+    return JSONResponse(status_code=status.HTTP_200_OK)
+
+
+@customrouter.get("/files/real", response_description="Get real files")
+async def get_real_assets(service=Depends(get_service)):
+    return JSONResponse(status_code=status.HTTP_200_OK, content=get_files(service))
+
+
+@customrouter.get("/files/delete", response_description="Delete unused files")
+async def delete_unused_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    assets = await crud.get_all(collection)
+    assets_ids = [asset["_id"] for asset in assets]
+    files = get_files(service)
+    files_ids = [file["id"] for file in files]
+    matches = [el for el in files_ids if el not in assets_ids]
+    for id in matches:
+        delete_file(service, id)
+    return JSONResponse(status_code=status.HTTP_200_OK)
 
 app.include_router(mainrouter, tags=["main"])
-app.include_router(defaultrouter, prefix=settings.API_V1_STR, tags=["default"])
-app.include_router(specificrouter, prefix=settings.API_V1_STR, tags=["specific"])
+app.include_router(integrablerouter, tags=["Integrable"])
+app.include_router(customrouter, tags=["Custom endpoints"])
+app.include_router(defaultrouter, prefix=settings.API_V1_STR,
+                   tags=["Default operations"])
