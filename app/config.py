@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     SERVER_NAME: str
     SERVER_HOST: AnyHttpUrl
     MONGODB_URL: str
-    DATABASE_NAME: str
+    MONGODB_DATABASE: str
     COLLECTION_NAME: str
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
