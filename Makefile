@@ -18,7 +18,7 @@ down: ## Stops all containers and removes volumes
 
 .PHONY: devbuild
 devbuild: ## Builds development containers
-	docker-compose -f docker-compose.devsolo.yml build
+	docker-compose -f docker-compose.devsolo.yml --env-file=.env.solo build
 
 .PHONY: prodbuild
 prodbuild: ## Builds production containers
