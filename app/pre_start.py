@@ -23,7 +23,7 @@ client = AsyncIOMotorClient(settings.MONGODB_URL)
 )
 def waitForDatabase() -> None:
     try:
-        collection = client[settings.DATABASE_NAME][settings.COLLECTION_NAME]
+        collection = client[settings.MONGODB_DATABASE][settings.COLLECTION_NAME]
         collection.find_one({"_id": "TEST"})
     except Exception as e:
         logger.error(e)

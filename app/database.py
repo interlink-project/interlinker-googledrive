@@ -12,7 +12,7 @@ class DataBase:
 db = DataBase()
 
 async def get_collection() -> AsyncIOMotorCollection:
-    return db.client[settings.DATABASE_NAME][settings.COLLECTION_NAME]
+    return db.client[settings.MONGODB_DATABASE][settings.COLLECTION_NAME]
 
 async def connect_to_mongo():
     logging.info("Connecting to database...")
