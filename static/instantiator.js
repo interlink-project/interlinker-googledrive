@@ -48,7 +48,7 @@ class UploadFilesService {
     });
   }
   confirm(id) {
-    return http.post(`${basepath}/api/v1/assets/${id}/persist/`, null, {});
+    return http.post(`${basepath}/assets/${id}/persist/`, null, {});
   }
 }
 
@@ -225,7 +225,7 @@ function App() {
               <Button
                 color='primary'
                 variant='contained'
-                href={`${basepath}/api/v1/assets/${created._id}/gui`}
+                href={`${basepath}/assets/${created._id}/gui`}
               >
                 Open asset
               </Button>
