@@ -85,17 +85,6 @@ async def show_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_c
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
-
-@defaultrouter.delete("/assets/{id}", response_description="Delete an asset")
-async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
-    if crud.get(collection, id) is not None:
-        delete_result = await crud.delete(collection, id)
-        if delete_result.deleted_count == 1:
-            return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
-
-    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
-
-
 integrablerouter = APIRouter()
 
 
@@ -128,9 +117,17 @@ async def instantiator(request: Request):
     return templates.TemplateResponse("instantiator.html", {"request": request, "BASE_PATH": BASE_PATH})
 
 
+@integrablerouter.delete("/assets/{id}", response_description="Delete an asset")
+async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
+    if crud.get(collection, id) is not None:
+        delete_result = await crud.delete(collection, id)
+        if delete_result.deleted_count == 1:
+            return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
+
+    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
+
 # SPECIFIC
 customrouter = APIRouter()
-
 
 @customrouter.post(
     "/assets/{id}/persist/", response_description="Persist a temporal asset"
