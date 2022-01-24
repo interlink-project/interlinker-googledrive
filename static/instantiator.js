@@ -134,13 +134,14 @@ function App() {
   const [file, setFile] = React.useState(null)
   const [iframeKey, setIframeKey] = React.useState(null)
   const [created, setCreated] = React.useState(null)
+  const inIframe = window.location !== window.parent.location
 
   var onUploadProgress = (progressEvent) => {
     setProgress(100 * progressEvent.loaded / progressEvent.total)
   }
 
   React.useEffect(() => {
-    if (window.parent) {
+    if (inIframe) {
       window.parent.postMessage({
         'code': 'initialized',
       }, "*");
@@ -160,12 +161,14 @@ function App() {
   const confirmFile = async () => {
     uploadService.confirm(file._id).then(response => {
       console.log("RESPONSE CONFIRM", response.data);
-      setCreated(response.data)
-      if (window.parent) {
+      
+      if (inIframe) {
         window.parent.postMessage({
           'code': 'asset_created',
           'data': response.data
         }, "*");
+      }else{
+        setCreated(response.data)
       }
     })
   }
@@ -234,7 +237,7 @@ function App() {
           :
           file ? (
             <React.Fragment>
-              <iframe key={iframeKey} style={{ width: "100%", minHeight: "80vh", border: 0 }} src={`https://docs.google.com/gview?url=${file.webContentLink}&embedded=true`} />
+              <iframe key={iframeKey} style={{ width: "100%", minHeight: "80vh", border: 0 }} src={file.webViewLink} />
               <Button variant="outlined" fullWidth sx={{ mt: 1 }} onClick={() => setIframeKey(iframeKey + 1)}>Refresh previewer</Button>
               <Button variant="contained" fullWidth sx={{ mt: 2 }} onClick={confirmFile}>Confirm upload</Button>
             </React.Fragment>
