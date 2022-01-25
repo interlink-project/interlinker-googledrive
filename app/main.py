@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Request, FastAPI, File, Depends, HTTPException, UploadFile, status
 from fastapi.encoders import jsonable_encoder
@@ -11,10 +11,11 @@ from starlette.middleware.cors import CORSMiddleware
 
 import app.crud as crud
 from app.config import settings
-from app.google import copy_file, create_file, delete_file, get_files
-from app.model import AssetSchema
+from app.google import copy_file, create_file,create_empty_file, delete_file, get_files
+from app.model import AssetSchema, AssetCreateSchema, mime_types, mime_type_options
 from app.database import AsyncIOMotorCollection, get_collection, connect_to_mongo, close_mongo_connection
 from app.googleservice import connect_to_google, close_google_connection, get_service
+
 BASE_PATH = os.getenv("BASE_PATH", "")
 
 app = FastAPI(
@@ -55,19 +56,28 @@ defaultrouter = APIRouter()
 
 
 @defaultrouter.post("/assets/", response_description="Add new asset", response_model=AssetSchema, status_code=201)
-async def create_asset(file: UploadFile = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+async def create_asset(asset_in: AssetCreateSchema, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    mime_type = asset_in.mime_type
+    name = asset_in.name
+    if mime_type in mime_type_options:
+        mime = mime_types[mime_type]
+        googlefile = create_empty_file(service, mime, name)
+        googlefile["temporal"] = False
+        return await crud.create(collection, googlefile)
+    raise HTTPException(status_code=400, detail=f"Mime type {mime_type} not in {mime_type_options}")
+        
+
+
+@defaultrouter.post("/assets/with_file/", response_description="Add new asset", response_model=AssetSchema, status_code=201)
+async def create_asset_with_file(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
     file_name = os.getcwd()+"/tmp/"+file.filename.replace(" ", "-")
     with open(file_name, 'wb+') as f:
         f.write(file.file.read())
         f.close()
-
-    try:
-        googlefile = create_file(service, file_name, "Copy")
-        return await crud.create(collection, googlefile)
-    except Exception as e:
-        raise HTTPException(status_code=503, detail="Internal server error")
-
-
+    print(f"File saved in {file_name}")
+    googlefile = create_file(service, file_name, "Copy")
+    return await crud.create(collection, googlefile)
+     
 @defaultrouter.get(
     "/assets/", response_description="List all assets", response_model=List[AssetSchema]
 )

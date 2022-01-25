@@ -4,7 +4,8 @@ import magic
 import os
 from app.model import fields
 
-def get_files(service, pageSize = None):
+
+def get_files(service, pageSize=None):
     # https://developers.google.com/drive/api/v3/reference/files
     if pageSize:
         results = service.files().list(
@@ -15,7 +16,20 @@ def get_files(service, pageSize = None):
 
 
 def get_file_by_id(service, id):
-    return service.files().get( fileId=id, fields=fields).execute()
+    return service.files().get(fileId=id, fields=fields).execute()
+
+
+def create_empty_file(service, mime_type, name):
+    file_metadata = {
+        'mimeType': mime_type,
+        'title': name,
+    }
+
+    file = service.files().create(body=file_metadata,
+                                  fields=fields).execute()
+    set_public(service, file["id"])
+    return file
+
 
 def create_file(service, path, name):
     mime = magic.Magic(mime=True)
@@ -30,11 +44,12 @@ def create_file(service, path, name):
                                   fields=fields).execute()
     if os.path.isfile(path):
         os.remove(path)
-    else:    ## Show an error ##
+    else:  # Show an error ##
         raise Exception("Error: %s file not found" % path)
-    
+
     set_public(service, file["id"])
     return file
+
 
 def copy_file(service, newTitle, id):
     file = service.files().copy(
@@ -42,8 +57,10 @@ def copy_file(service, newTitle, id):
     set_public(service, file["id"])
     return file
 
+
 def delete_file(service, id):
     return service.files().delete(fileId=id).execute()
+
 
 def set_public(service, file_id):
     user_permission = {
@@ -56,6 +73,7 @@ def set_public(service, file_id):
         fields='id',
     ).execute()
     return perm
+
 
 def clean(service):
     print("Syncing (cleaning)")

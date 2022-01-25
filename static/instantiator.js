@@ -8,8 +8,11 @@ const {
   Button,
   Input,
   LinearProgress,
-  IconButton,
   Avatar,
+  Grid,
+  Select,
+  MenuItem,
+  TextField
 } = MaterialUI;
 
 var { basepath } = jQuery('#data').data();
@@ -40,12 +43,15 @@ class UploadFilesService {
 
     formData.append("file", file);
 
-    return http.post(`${basepath}/api/v1/assets/`, formData, {
+    return http.post(`${basepath}/api/v1/assets/with_file/`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
       onUploadProgress,
     });
+  }
+  create(data) {
+    return http.post(`${basepath}/api/v1/assets/`, data);
   }
   confirm(id) {
     return http.post(`${basepath}/assets/${id}/persist/`, null, {});
@@ -134,7 +140,13 @@ function App() {
   const [file, setFile] = React.useState(null)
   const [iframeKey, setIframeKey] = React.useState(null)
   const [created, setCreated] = React.useState(null)
+  const [mimeType, setMimeType] = React.useState('');
+  const [name, setName] = React.useState("");
+  const [error, setError] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+
   const inIframe = window.location !== window.parent.location
+  const maxFiles = 1
 
   var onUploadProgress = (progressEvent) => {
     setProgress(100 * progressEvent.loaded / progressEvent.total)
@@ -148,33 +160,94 @@ function App() {
     }
   }, [])
 
-  const selectFile = async (event) => {
+  const selectFile = (event) => {
+    setLoading(true)
     var f = event.target.files[0]
 
-    uploadService.upload(f, onUploadProgress).then(response => {
+    uploadService.upload(f, onUploadProgress)
+    .then(response => {
       console.log("RESPONSE UPLOAD", response.data);
       setFile(response.data)
       setProgress(0)
     })
+    .finally(() => setLoading(false))
   }
 
-  const confirmFile = async () => {
-    uploadService.confirm(file._id).then(response => {
+  const confirmFile = () => {
+    setLoading(true)
+    uploadService.confirm(file._id)
+    .then(response => {
       console.log("RESPONSE CONFIRM", response.data);
-      
+
       if (inIframe) {
         window.parent.postMessage({
           'code': 'asset_created',
           'data': response.data
         }, "*");
-      }else{
+      } else {
         setCreated(response.data)
       }
     })
+    .finally(() => setLoading(false))
   }
 
-  const maxFiles = 1
+  const submit = () => {
+    setLoading(true)
+    uploadService.create({
+      mime_type: mimeType,
+      name
+    })
+    .then(response => {
+      console.log("RESPONSE CREATE", response.data);
 
+      if (inIframe) {
+        window.parent.postMessage({
+          'code': 'asset_created',
+          'data': response.data
+        }, "*");
+      } else {
+        setCreated(response.data)
+      }
+    })
+    .finally(() => setLoading(false))
+  }
+
+  const handleChange = (event) => {
+    setMimeType(event.target.value);
+  };
+
+  const documentTypes = {
+    "docs": {
+      "value": "docs",
+      "label": "Document",
+      "icon": "https://ssl.gstatic.com/docs/doclist/images/mediatype/icon_1_document_x32.png"
+    },
+    "spreadsheet": {
+      "value": "spreadsheet",
+      "label": "Spreadsheet",
+      "icon": "https://ssl.gstatic.com/docs/doclist/images/mediatype/icon_1_spreadsheet_x32.png"
+    },
+    "slides": {
+      "value": "slide",
+      "label": "Slide",
+      "icon": "https://ssl.gstatic.com/docs/doclist/images/mediatype/icon_1_presentation_x32.png"
+    },
+    "drawing": {
+      "value": "drawing",
+      "label": "Drawing",
+      "icon": "https://ssl.gstatic.com/docs/doclist/images/mediatype/icon_1_drawing_x32.png"
+    },
+    "site": {
+      "value": "site",
+      "label": "Site",
+      "icon": "https://ssl.gstatic.com/docs/doclist/images/mediatype/icon_1_site_x32.png"
+    },
+    "form": {
+      "value": "form",
+      "label": "Form",
+      "icon": "https://ssl.gstatic.com/docs/doclist/images/mediatype/icon_1_form_x32.png"
+    }
+  }
   // src={file.webViewLink}
   // src={`https://docs.google.com/gview?url=${file.webContentLink}&embedded=true`}
 
@@ -237,63 +310,95 @@ function App() {
           :
           file ? (
             <React.Fragment>
-              <iframe key={iframeKey} style={{ width: "100%", minHeight: "80vh", border: 0 }} src={`https://docs.google.com/viewer?srcid=${file._id}&pid=explorer&efh=false&a=v&chrome=true&embedded=false`} />
+              <iframe key={iframeKey} style={{ width: "100%", minHeight: "80vh", border: 0 }} src={file.webViewLink} />
               <Button variant="outlined" fullWidth sx={{ mt: 1 }} onClick={() => setIframeKey(iframeKey + 1)}>Refresh previewer</Button>
               <Button variant="contained" fullWidth sx={{ mt: 2 }} onClick={confirmFile}>Confirm upload</Button>
             </React.Fragment>
           ) : <Box>
-            <label htmlFor="contained-button-file">
-              <Input id="contained-button-file" type="file" sx={{ display: "none" }} onChange={selectFile} />
-              <Box
-                sx={{
-                  alignItems: 'center',
-                  border: 1,
-                  borderRadius: 1,
-                  borderColor: 'divider',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'center',
-                  outline: 'none',
-                  p: 6,
-                  '&:hover': {
-                    backgroundColor: 'action.hover',
-                    cursor: 'pointer',
-                    opacity: 0.5,
-                  },
-                }}
-              >
-                <Box
-                  sx={{
-                    '& img': {
-                      width: 100,
-                    },
-                  }}
-                >
-                  <img
-                    alt='Select file'
-                    src={`${basepath}/static/icon.svg`}
-                  />
-                </Box>
-                <Box sx={{ p: 2 }}>
-                  <Typography
-                    color='textPrimary'
-                    variant='h6'
+
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <label htmlFor="contained-button-file">
+                  <Input id="contained-button-file" type="file" sx={{ display: "none" }} onChange={selectFile} />
+                  <Typography variant="overline">Import an existing file</Typography>
+                  <Box
+                    sx={{
+                      alignItems: 'center',
+                      border: 1,
+                      borderRadius: 1,
+                      borderColor: 'divider',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      justifyContent: 'center',
+                      outline: 'none',
+                      p: 6,
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                        cursor: 'pointer',
+                        opacity: 0.5,
+                      },
+                    }}
                   >
-                    {`Select file`}
-                  </Typography>
-                  <Box sx={{ mt: 2 }}>
-                    <Typography
-                      color='textPrimary'
-                      variant='body1'
+                    <Box
+                      sx={{
+                        '& img': {
+                          width: 100,
+                        },
+                      }}
                     >
-                      {`Drop file${maxFiles && maxFiles === 1 ? '' : 's'}`} or click here
-                    </Typography>
+                      <img
+                        alt='Select file'
+                        src={`${basepath}/static/icon.svg`}
+                      />
+                    </Box>
+                    <Box sx={{ p: 2 }}>
+                      <Typography
+                        color='textPrimary'
+                        variant='h6'
+                      >
+                        {`Select file`}
+                      </Typography>
+                      <Box sx={{ mt: 2 }}>
+                        <Typography
+                          color='textPrimary'
+                          variant='body1'
+                        >
+                          {`Drop file${maxFiles && maxFiles === 1 ? '' : 's'}`} or click here
+                        </Typography>
 
 
+                      </Box>
+                    </Box>
                   </Box>
-                </Box>
-              </Box>
-            </label>
+                </label>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="overline">Or create an empty file...</Typography>
+                <TextField error={error === "name"} helperText={error === "name" && "Required"} variant="outlined" value={name} fullWidth onChange={(e) => setName(e.target.value)} placeholder="Name" />
+                <Select
+                  labelId="demo-simple-select-helper-label"
+                  id="demo-simple-select-helper"
+                  value={mimeType}
+                  label="File type"
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{ mt: 2 }}
+                >
+                  <MenuItem value="">
+                    <em>None</em>
+                  </MenuItem>
+                  {Object.keys(documentTypes).map(key => {
+                    return <MenuItem value={documentTypes[key].value}><Avatar src={documentTypes[key].icon} sx={{ width: 24, height: 24, mr: 2 }} />{documentTypes[key].label}</MenuItem>
+                  })}
+
+                </Select>
+                <Button disabled={loading} fullWidth variant="contained" sx={{ mt: 2 }} onClick={submit}>
+                  Create asset
+                </Button>
+              </Grid>
+            </Grid>
+
+
             {progress !== 0 && <LinearProgress color="primary" variant="determinate" value={progress} />}
           </Box>
         }
