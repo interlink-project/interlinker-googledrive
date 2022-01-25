@@ -237,7 +237,7 @@ function App() {
           :
           file ? (
             <React.Fragment>
-              <iframe key={iframeKey} style={{ width: "100%", minHeight: "80vh", border: 0 }} src={file.webViewLink} />
+              <iframe key={iframeKey} style={{ width: "100%", minHeight: "80vh", border: 0 }} src={`https://docs.google.com/viewer?srcid=${file._id}&pid=explorer&efh=false&a=v&chrome=true&embedded=false`} />
               <Button variant="outlined" fullWidth sx={{ mt: 1 }} onClick={() => setIframeKey(iframeKey + 1)}>Refresh previewer</Button>
               <Button variant="contained" fullWidth sx={{ mt: 2 }} onClick={confirmFile}>Confirm upload</Button>
             </React.Fragment>

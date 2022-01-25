@@ -8,4 +8,6 @@ LOG_LEVEL=${LOG_LEVEL:-info}
 # Let the DB start
 python /app/app/pre_start.py
 
+mkdir /app/tmp
+
 exec gunicorn -k "uvicorn.workers.UvicornWorker" -c "gunicorn_conf.py" "app.main:app"
