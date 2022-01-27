@@ -99,7 +99,7 @@ integrablerouter = APIRouter()
 
 
 @integrablerouter.get(
-    "/assets/{id}/gui/", response_description="GUI for specific asset"
+    "/assets/{id}/viewer/", response_description="GUI for specific asset"
 )
 async def gui_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
     asset = await crud.get(collection, id)
