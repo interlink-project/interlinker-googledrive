@@ -43,7 +43,7 @@ class UploadFilesService {
 
     formData.append("file", file);
 
-    return http.post(`${basepath}/api/v1/assets/with_file/`, formData, {
+    return http.post(`${basepath}/api/v1/assets/with_file`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -51,10 +51,10 @@ class UploadFilesService {
     });
   }
   create(data) {
-    return http.post(`${basepath}/api/v1/assets/`, data);
+    return http.post(`${basepath}/api/v1/assets`, data);
   }
   confirm(id) {
-    return http.post(`${basepath}/assets/${id}/persist/`, null, {});
+    return http.post(`${basepath}/assets/${id}/persist`, null, {});
   }
 }
 
@@ -301,7 +301,7 @@ function App() {
               <Button
                 color='primary'
                 variant='contained'
-                href={`${basepath}/assets/${created._id}/viewer/`}
+                href={`${basepath}/assets/${created._id}/view`}
               >
                 Open asset
               </Button>

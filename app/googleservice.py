@@ -1,4 +1,6 @@
 import logging
+
+from itsdangerous import exc
 from apiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -9,17 +11,30 @@ credentials = ServiceAccountCredentials.from_json_keyfile_name(
 
 # https://developers.google.com/drive/api/v3/quickstart/python
 
+
 class GoogleService:
     client = None
 
+
 service = GoogleService()
 
+
+def create_service():
+    serv = build('drive', 'v3', credentials=credentials)
+    service.client = serv
+    return serv
+
+
 async def get_service():
-    return service.client
+    try:
+        return service.client
+    except:
+        return create_service()
+
 
 async def connect_to_google():
     logging.info("Connecting to Google Drive...")
-    service.client = build('drive', 'v3', credentials=credentials)
+    create_service()
     logging.info("Connected to google drive！")
 
 
