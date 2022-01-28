@@ -32,6 +32,7 @@ integrated: down ## Starts integrated development containers
 	docker network create traefik-public || true
 	docker-compose -f docker-compose.devintegrated.yml up -d
 
+
 #######################
 ## RUN TESTS
 #######################
@@ -39,7 +40,7 @@ integrated: down ## Starts integrated development containers
 .PHONY: tests
 tests: ## Starts test container
 	#docker-compose exec googledrive pytest --cov=app --cov-report=term-missing app/tests
-	docker-compose exec -T googledrive pytest app/tests
+	docker-compose -f docker-compose.devsolo.yml --env-file .env.solo exec -T googledrive pytest app/tests
 
 .PHONY: testing
 testing: build solo tests down ## Builds containers, runs them, runs test container and deletes all containers

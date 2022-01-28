@@ -10,7 +10,7 @@ from app.google import delete_file
 
 
 def test_ping(test_app):
-    response = test_app.get("/healthcheck/")
+    response = test_app.get("/healthcheck")
     assert response.status_code == 200
     assert response.json() == True
 
@@ -28,7 +28,6 @@ def test_create_asset(test_app, monkeypatch):
         "iconLink": None,
         "createdTime": None,
         "modifiedTime": None,
-
     }
 
     async def mock_create(payload):
@@ -43,7 +42,7 @@ def test_create_asset(test_app, monkeypatch):
 
     monkeypatch.setattr(crud, "create", mock_create)
     files_data = {'file': ("demoooo.docx", open("./app/tests/demo.docx", "rb"))}
-    response = test_app.post("/api/v1/assets/", files=files_data)
+    response = test_app.post("/api/v1/assets", files=files_data)
 
     assert response.status_code == 201
     assert response.json() == test_response_payload
