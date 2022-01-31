@@ -165,30 +165,39 @@ function App() {
     var f = event.target.files[0]
 
     uploadService.upload(f, onUploadProgress)
-    .then(response => {
-      console.log("RESPONSE UPLOAD", response.data);
-      setFile(response.data)
-      setProgress(0)
-    })
-    .finally(() => setLoading(false))
+      .then(response => {
+        console.log("RESPONSE UPLOAD", response.data);
+        setFile(response.data)
+        setProgress(0)
+      })
+      .finally(() => setLoading(false))
   }
 
+  const sendMessage = (data) => {
+
+    if (inIframe) {
+      const dataToSend = {}
+      dataToSend["id"] = data._id
+      dataToSend["name"] = data.name
+      dataToSend["icon"] = data.iconLink
+      // documentTypes[mimeType].icon
+
+      window.parent.postMessage({
+        'code': 'asset_created',
+        'data': dataToSend
+      }, "*");
+    } else {
+      setCreated(dataToSend)
+    }
+  }
   const confirmFile = () => {
     setLoading(true)
     uploadService.confirm(file._id)
-    .then(response => {
-      console.log("RESPONSE CONFIRM", response.data);
-
-      if (inIframe) {
-        window.parent.postMessage({
-          'code': 'asset_created',
-          'data': response.data
-        }, "*");
-      } else {
-        setCreated(response.data)
-      }
-    })
-    .finally(() => setLoading(false))
+      .then(response => {
+        console.log("RESPONSE CONFIRM", response.data);
+        sendMessage(response.data)
+      })
+      .finally(() => setLoading(false))
   }
 
   const submit = () => {
@@ -197,19 +206,11 @@ function App() {
       mime_type: mimeType,
       name
     })
-    .then(response => {
-      console.log("RESPONSE CREATE", response.data);
-
-      if (inIframe) {
-        window.parent.postMessage({
-          'code': 'asset_created',
-          'data': response.data
-        }, "*");
-      } else {
-        setCreated(response.data)
-      }
-    })
-    .finally(() => setLoading(false))
+      .then(response => {
+        console.log("RESPONSE CREATE", response.data);
+        sendMessage(response.data)
+      })
+      .finally(() => setLoading(false))
   }
 
   const handleChange = (event) => {
