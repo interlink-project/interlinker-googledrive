@@ -27,7 +27,13 @@ from app.database import (
 )
 from app.google import copy_file, create_empty_file, create_file, delete_file, get_files
 from app.googleservice import close_google_connection, connect_to_google, get_service
-from app.model import AssetCreateSchema, AssetSchema, mime_type_options, mime_types
+from app.model import (
+    AssetCreateSchema,
+    AssetFromGoogleId,
+    AssetSchema,
+    mime_type_options,
+    mime_types,
+)
 
 BASE_PATH = os.getenv("BASE_PATH", "")
 
@@ -69,16 +75,14 @@ integrablerouter = APIRouter()
 
 
 @integrablerouter.post("/assets", response_description="Add new asset", response_model=AssetSchema, status_code=201)
-async def create_asset(asset_in: AssetCreateSchema, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    mime_type = asset_in.mime_type
-    name = asset_in.name
-    if mime_type in mime_type_options:
-        mime = mime_types[mime_type]
-        googlefile = create_empty_file(service, mime, name)
-        googlefile["temporal"] = False
-        return await crud.create(collection, googlefile)
-    raise HTTPException(
-        status_code=400, detail=f"Mime type {mime_type} not in {mime_type_options}")
+async def create_asset(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    file_name = os.getcwd()+"/tmp/"+file.filename.replace(" ", "-")
+    with open(file_name, 'wb+') as f:
+        f.write(file.file.read())
+        f.close()
+    print(f"File saved in {file_name}")
+    googlefile = create_file(service, file_name, "Copy")
+    return await crud.create(collection, googlefile)
 
 
 @integrablerouter.get(
@@ -135,16 +139,17 @@ async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_
 customrouter = APIRouter()
 
 
-@customrouter.post("/assets/with_file", response_description="Add new asset", response_model=AssetSchema, status_code=201)
-async def create_asset_with_file(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    file_name = os.getcwd()+"/tmp/"+file.filename.replace(" ", "-")
-    with open(file_name, 'wb+') as f:
-        f.write(file.file.read())
-        f.close()
-    print(f"File saved in {file_name}")
-    googlefile = create_file(service, file_name, "Copy")
-    return await crud.create(collection, googlefile)
-
+@customrouter.post("/assets/empty", response_description="Asset JSON", response_model=AssetSchema, status_code=201)
+async def create_empty_asset(asset_in: AssetCreateSchema, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    mime_type = asset_in.mime_type
+    name = asset_in.name
+    if mime_type in mime_type_options:
+        mime = mime_types[mime_type]
+        googlefile = create_empty_file(service, mime, name)
+        googlefile["temporal"] = False
+        return await crud.create(collection, googlefile)
+    raise HTTPException(
+        status_code=400, detail=f"Mime type {mime_type} not in {mime_type_options}")
 
 @customrouter.get(
     "/assets", response_description="List all assets", response_model=List[AssetSchema]

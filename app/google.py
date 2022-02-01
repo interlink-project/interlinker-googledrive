@@ -1,4 +1,5 @@
 # https://developers.google.com/analytics/devguides/config/mgmt/v3/quickstart/service-py
+from fastapi.exceptions import HTTPException
 from apiclient.http import MediaFileUpload
 import magic
 import os
@@ -22,7 +23,7 @@ def get_file_by_id(service, id):
 def create_empty_file(service, mime_type, name):
     file_metadata = {
         'mimeType': mime_type,
-        'title': name,
+        'name': name,
     }
 
     file = service.files().create(body=file_metadata,
@@ -51,11 +52,14 @@ def create_file(service, path, name):
     return file
 
 
-def copy_file(service, newTitle, id):
-    file = service.files().copy(
-        fileId=id, body={'title': newTitle}, fields=fields).execute()
-    set_public(service, file["id"])
-    return file
+def copy_file(service, name, id):
+    try:
+        file = service.files().copy(
+            fileId=id, body={'name': name}, fields=fields).execute()
+        set_public(service, file["id"])
+        return file
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
 
 def delete_file(service, id):

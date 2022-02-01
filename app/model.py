@@ -37,3 +37,6 @@ class AssetSchema(BaseModel):
 class AssetCreateSchema(BaseModel):
     mime_type : str
     name : str
+
+class AssetFromGoogleId(BaseModel):
+    id: str

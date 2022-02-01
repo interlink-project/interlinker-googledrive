@@ -43,22 +43,25 @@ class UploadFilesService {
 
     formData.append("file", file);
 
-    return http.post(`${basepath}/api/v1/assets/with_file`, formData, {
+    return http.post(`${basepath}/assets`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
       onUploadProgress,
     });
   }
+  clone(id) {
+    return http.post(`${basepath}/assets/${id}/clone`);
+  }
   create(data) {
-    return http.post(`${basepath}/assets`, data);
+    return http.post(`${basepath}/api/v1/assets/empty`, data);
   }
   confirm(id) {
     return http.post(`${basepath}/assets/${id}/persist`, null, {});
   }
 }
 
-const uploadService = new UploadFilesService();
+const service = new UploadFilesService();
 
 // Create a theme instance.
 const theme = createTheme({
@@ -140,9 +143,13 @@ function App() {
   const [file, setFile] = React.useState(null)
   const [iframeKey, setIframeKey] = React.useState(null)
   const [created, setCreated] = React.useState(null)
-  const [mimeType, setMimeType] = React.useState('');
+  const [mimeType, setMimeType] = React.useState('docs');
   const [name, setName] = React.useState("");
-  const [error, setError] = React.useState("");
+  const [uri, setUri] = React.useState("");
+  const [error, setError] = React.useState({
+    key: "",
+    value: ""
+  });
   const [loading, setLoading] = React.useState(false);
 
   const inIframe = window.location !== window.parent.location
@@ -160,11 +167,41 @@ function App() {
     }
   }, [])
 
+  function getIdFromUrl(url) { return url.match(/[-\w]{25,}/); }
+  function isValidHttpUrl(string) {
+    let url;
+
+    try {
+      url = new URL(string);
+    } catch (_) {
+      return false;
+    }
+
+    return url.protocol === "http:" || url.protocol === "https:";
+  }
+
+  React.useEffect(() => {
+    if (!isValidHttpUrl(uri)) {
+      setError({
+        "key": "uri",
+        "value": "URI invalid"
+      })
+
+
+    } else {
+      console.log(uri, getIdFromUrl(uri)[0])
+      setError({
+        key: "",
+        value: ""
+      })
+    }
+  }, [uri])
+
   const selectFile = (event) => {
     setLoading(true)
     var f = event.target.files[0]
 
-    uploadService.upload(f, onUploadProgress)
+    service.upload(f, onUploadProgress)
       .then(response => {
         console.log("RESPONSE UPLOAD", response.data);
         setFile(response.data)
@@ -192,7 +229,7 @@ function App() {
   }
   const confirmFile = () => {
     setLoading(true)
-    uploadService.confirm(file._id)
+    service.confirm(file._id)
       .then(response => {
         console.log("RESPONSE CONFIRM", response.data);
         sendMessage(response.data)
@@ -200,12 +237,11 @@ function App() {
       .finally(() => setLoading(false))
   }
 
-  const submit = () => {
+  const submit = (data, fromId) => {
+    console.log("SENDING ", data)
     setLoading(true)
-    uploadService.create({
-      mime_type: mimeType,
-      name
-    })
+    const fn = fromId ? service.clone : service.create
+    fn(data)
       .then(response => {
         console.log("RESPONSE CREATE", response.data);
         sendMessage(response.data)
@@ -216,6 +252,7 @@ function App() {
   const handleChange = (event) => {
     setMimeType(event.target.value);
   };
+
 
   const documentTypes = {
     "docs": {
@@ -253,7 +290,7 @@ function App() {
   // src={`https://docs.google.com/gview?url=${file.webContentLink}&embedded=true`}
 
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="lg">
 
       <div>
         {created ?
@@ -317,8 +354,8 @@ function App() {
             </React.Fragment>
           ) : <Box>
 
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6} lg={4}>
                 <label htmlFor="contained-button-file">
                   <Input id="contained-button-file" type="file" sx={{ display: "none" }} onChange={selectFile} />
                   <Typography variant="overline">Import an existing file</Typography>
@@ -373,9 +410,9 @@ function App() {
                   </Box>
                 </label>
               </Grid>
-              <Grid item xs={6}>
-                <Typography variant="overline">Or create an empty file...</Typography>
-                <TextField error={error === "name"} helperText={error === "name" && "Required"} variant="outlined" value={name} fullWidth onChange={(e) => setName(e.target.value)} placeholder="Name" />
+              <Grid item xs={12} md={6} lg={4}>
+                <Typography variant="overline">Create an empty file...</Typography>
+                <TextField error={error.key === "name"} helperText={error.key === "name" && (error.value || "Insert a valid name")} variant="outlined" value={name} variant="outlined" value={name} fullWidth onChange={(e) => setName(e.target.value)} placeholder="Name" />
                 <Select
                   labelId="demo-simple-select-helper-label"
                   id="demo-simple-select-helper"
@@ -385,16 +422,24 @@ function App() {
                   fullWidth
                   sx={{ mt: 2 }}
                 >
-                  <MenuItem value="">
-                    <em>None</em>
-                  </MenuItem>
                   {Object.keys(documentTypes).map(key => {
                     return <MenuItem value={documentTypes[key].value}><Avatar src={documentTypes[key].icon} sx={{ width: 24, height: 24, mr: 2 }} />{documentTypes[key].label}</MenuItem>
                   })}
 
                 </Select>
-                <Button disabled={loading} fullWidth variant="contained" sx={{ mt: 2 }} onClick={submit}>
+                <Button disabled={loading} fullWidth variant="contained" sx={{ mt: 2 }} onClick={() => submit({
+                  mime_type: mimeType,
+                  name
+                })}>
                   Create asset
+                </Button>
+              </Grid>
+              <Grid item xs={12} md={6} lg={4}>
+                <Typography variant="overline">Or import from Google Drive</Typography>
+                <TextField error={error.key === "uri"} helperText={error.key === "uri" && (error.value || "Insert a valid uri")} variant="outlined" value={uri} fullWidth onChange={(e) => setUri(e.target.value)} placeholder="URI" />
+
+                <Button disabled={loading || !getIdFromUrl(uri)} fullWidth variant="contained" sx={{ mt: 2 }} onClick={() => submit(getIdFromUrl(uri)[0], true)}>
+                  Import
                 </Button>
               </Grid>
             </Grid>
