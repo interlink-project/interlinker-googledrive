@@ -57,7 +57,7 @@ class UploadFilesService {
     return http.post(`${basepath}/api/v1/assets/empty`, data);
   }
   confirm(id) {
-    return http.post(`${basepath}/assets/${id}/persist`, null, {});
+    return http.post(`${basepath}/api/v1/assets/${id}/persist`, null, {});
   }
 }
 
@@ -409,6 +409,8 @@ function App() {
                     </Box>
                   </Box>
                 </label>
+                {progress !== 0 && <LinearProgress color="primary" variant="determinate" value={progress} />}
+
               </Grid>
               <Grid item xs={12} md={6} lg={4}>
                 <Typography variant="overline">Create an empty file...</Typography>
@@ -445,7 +447,6 @@ function App() {
             </Grid>
 
 
-            {progress !== 0 && <LinearProgress color="primary" variant="determinate" value={progress} />}
           </Box>
         }
 
