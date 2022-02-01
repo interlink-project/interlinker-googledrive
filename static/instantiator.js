@@ -51,7 +51,7 @@ class UploadFilesService {
     });
   }
   create(data) {
-    return http.post(`${basepath}/api/v1/assets`, data);
+    return http.post(`${basepath}/assets`, data);
   }
   confirm(id) {
     return http.post(`${basepath}/assets/${id}/persist`, null, {});
@@ -174,9 +174,8 @@ function App() {
   }
 
   const sendMessage = (data) => {
-
+    const dataToSend = {}
     if (inIframe) {
-      const dataToSend = {}
       dataToSend["id"] = data._id
       dataToSend["name"] = data.name
       dataToSend["icon"] = data.iconLink
@@ -187,6 +186,7 @@ function App() {
         'data': dataToSend
       }, "*");
     } else {
+      dataToSend["id"] = data._id
       setCreated(dataToSend)
     }
   }
@@ -302,7 +302,7 @@ function App() {
               <Button
                 color='primary'
                 variant='contained'
-                href={`${basepath}/assets/${created._id}/view`}
+                href={`${basepath}/assets/${created.id}/view`}
               >
                 Open asset
               </Button>

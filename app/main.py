@@ -1,20 +1,33 @@
 import os
 from typing import List, Optional
 
-from fastapi import APIRouter, Request, FastAPI, File, Depends, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-
+from fastapi.templating import Jinja2Templates
 from starlette.middleware.cors import CORSMiddleware
 
 import app.crud as crud
 from app.config import settings
-from app.google import copy_file, create_file,create_empty_file, delete_file, get_files
-from app.model import AssetSchema, AssetCreateSchema, mime_types, mime_type_options
-from app.database import AsyncIOMotorCollection, get_collection, connect_to_mongo, close_mongo_connection
-from app.googleservice import connect_to_google, close_google_connection, get_service
+from app.database import (
+    AsyncIOMotorCollection,
+    close_mongo_connection,
+    connect_to_mongo,
+    get_collection,
+)
+from app.google import copy_file, create_empty_file, create_file, delete_file, get_files
+from app.googleservice import close_google_connection, connect_to_google, get_service
+from app.model import AssetCreateSchema, AssetSchema, mime_type_options, mime_types
 
 BASE_PATH = os.getenv("BASE_PATH", "")
 
@@ -55,6 +68,19 @@ def healthcheck():
 integrablerouter = APIRouter()
 
 
+@integrablerouter.post("/assets", response_description="Add new asset", response_model=AssetSchema, status_code=201)
+async def create_asset(asset_in: AssetCreateSchema, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    mime_type = asset_in.mime_type
+    name = asset_in.name
+    if mime_type in mime_type_options:
+        mime = mime_types[mime_type]
+        googlefile = create_empty_file(service, mime, name)
+        googlefile["temporal"] = False
+        return await crud.create(collection, googlefile)
+    raise HTTPException(
+        status_code=400, detail=f"Mime type {mime_type} not in {mime_type_options}")
+
+
 @integrablerouter.get(
     "/assets/instantiate", response_description="GUI for asset creation"
 )
@@ -72,6 +98,7 @@ async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_c
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
+
 @integrablerouter.delete("/assets/{id}", response_description="No content")
 async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
     if crud.get(collection, id) is not None:
@@ -81,10 +108,11 @@ async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
+
 @integrablerouter.get(
     "/assets/{id}/view", response_description="GUI for interaction with asset"
 )
-async def gui_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
+async def view_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
     asset = await crud.get(collection, id)
     if asset is not None:
         return RedirectResponse(url=asset["webViewLink"])
@@ -106,17 +134,6 @@ async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_
 # Custom endpoints (have a /api/v1 prefix)
 customrouter = APIRouter()
 
-@customrouter.post("/assets", response_description="Add new asset", response_model=AssetSchema, status_code=201)
-async def create_asset(asset_in: AssetCreateSchema, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    mime_type = asset_in.mime_type
-    name = asset_in.name
-    if mime_type in mime_type_options:
-        mime = mime_types[mime_type]
-        googlefile = create_empty_file(service, mime, name)
-        googlefile["temporal"] = False
-        return await crud.create(collection, googlefile)
-    raise HTTPException(status_code=400, detail=f"Mime type {mime_type} not in {mime_type_options}")
-
 
 @customrouter.post("/assets/with_file", response_description="Add new asset", response_model=AssetSchema, status_code=201)
 async def create_asset_with_file(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
@@ -127,7 +144,8 @@ async def create_asset_with_file(file: Optional[UploadFile] = File(...), collect
     print(f"File saved in {file_name}")
     googlefile = create_file(service, file_name, "Copy")
     return await crud.create(collection, googlefile)
-     
+
+
 @customrouter.get(
     "/assets", response_description="List all assets", response_model=List[AssetSchema]
 )
@@ -145,6 +163,7 @@ async def show_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_c
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
+
 @customrouter.post(
     "/assets/{id}/persist", response_description="Persist a temporal asset"
 )
@@ -155,7 +174,8 @@ async def persist_asset(id: str, collection: AsyncIOMotorCollection = Depends(ge
 
     raise HTTPException(status_code=404, detail="Asset {id} not found")
 
-#TODO: Task to remove unused files
+# TODO: Task to remove unused files
+
 
 @customrouter.get("/clean")
 async def clean_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
