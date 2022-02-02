@@ -43,11 +43,6 @@ class AssetBasicDataSchema(BaseModel):
         asset_id = values["id"]
         return settings.SERVER_HOST + f"/assets/{asset_id}/view"
 
-    @validator('editLink', always=True)
-    def edit_link(cls, name, values):
-        asset_id = values["id"]
-        return settings.SERVER_HOST + f"/assets/{asset_id}/edit"
-
     @validator('cloneLink', always=True)
     def clone_link(cls, name, values):
         asset_id = values["id"]
