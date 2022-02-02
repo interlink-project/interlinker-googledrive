@@ -25,12 +25,11 @@ from app.database import (
     connect_to_mongo,
     get_collection,
 )
-from app.google import copy_file, create_empty_file, create_file, delete_file, get_files
+from app.google import delete_file, get_files
 from app.googleservice import close_google_connection, connect_to_google, get_service
 from app.model import (
     AssetCreateSchema,
-    AssetFromGoogleId,
-    AssetSchema,
+    AssetBasicDataSchema,
     mime_type_options,
     mime_types,
 )
@@ -74,15 +73,15 @@ def healthcheck():
 integrablerouter = APIRouter()
 
 
-@integrablerouter.post("/assets", response_description="Add new asset", response_model=AssetSchema, status_code=201)
+@integrablerouter.post("/assets", response_description="Add new asset", status_code=201)
 async def create_asset(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
     file_name = os.getcwd()+"/tmp/"+file.filename.replace(" ", "-")
     with open(file_name, 'wb+') as f:
         f.write(file.file.read())
         f.close()
     print(f"File saved in {file_name}")
-    googlefile = create_file(service, file_name, "Copy")
-    return await crud.create(collection, googlefile)
+    # optional because needs confirmation
+    return await crud.create(collection, service, file_name)
 
 
 @integrablerouter.get(
@@ -93,20 +92,18 @@ async def instantiate_asset(request: Request):
 
 
 @integrablerouter.get(
-    "/assets/{id}", response_description="Asset JSON"
+    "/assets/{id}", response_description="Asset JSON", response_model=AssetBasicDataSchema
 )
-async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
-    asset = await crud.get(collection, id)
-    if asset is not None:
+async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    if (asset := await crud.get(collection, service, id)) is not None:
         return asset
-
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
 
 @integrablerouter.delete("/assets/{id}", response_description="No content")
-async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
-    if crud.get(collection, id) is not None:
-        delete_result = await crud.delete(collection, id)
+async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    if crud.get(collection, service, id) is not None:
+        delete_result = await crud.delete(collection, service, id)
         if delete_result.deleted_count == 1:
             return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -116,8 +113,8 @@ async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get
 @integrablerouter.get(
     "/assets/{id}/view", response_description="GUI for interaction with asset"
 )
-async def view_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
-    asset = await crud.get(collection, id)
+async def asset_viewer(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    asset = await crud.get(collection, service, id)
     if asset is not None:
         return RedirectResponse(url=asset["webViewLink"])
 
@@ -125,12 +122,11 @@ async def view_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_c
 
 
 @integrablerouter.post(
-    "/assets/{id}/clone", response_description="Asset JSON", response_model=AssetSchema, status_code=201
+    "/assets/{id}/clone", response_description="Asset JSON", status_code=201
 )
 async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    if crud.get(collection, id) is not None:
-        googlefile = copy_file(service, "newTitle", id)
-        return await crud.create(collection, googlefile)
+    if crud.get(collection, service, id) is not None:
+        return await crud.clone(collection, service, id)
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
@@ -139,30 +135,28 @@ async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_
 customrouter = APIRouter()
 
 
-@customrouter.post("/assets/empty", response_description="Asset JSON", response_model=AssetSchema, status_code=201)
+@customrouter.post("/assets/empty", response_description="Asset JSON", status_code=201)
 async def create_empty_asset(asset_in: AssetCreateSchema, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
     mime_type = asset_in.mime_type
     name = asset_in.name
     if mime_type in mime_type_options:
         mime = mime_types[mime_type]
-        googlefile = create_empty_file(service, mime, name)
-        googlefile["temporal"] = False
-        return await crud.create(collection, googlefile)
+        return await crud.create_empty(collection, service, mime, name)
     raise HTTPException(
         status_code=400, detail=f"Mime type {mime_type} not in {mime_type_options}")
 
 @customrouter.get(
-    "/assets", response_description="List all assets", response_model=List[AssetSchema]
+    "/assets", response_description="List all assets"
 )
-async def list_assets(collection: AsyncIOMotorCollection = Depends(get_collection)):
-    return await crud.get_all(collection)
+async def list_assets(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    return await crud.get_all(collection, service)
 
 
 @customrouter.get(
-    "/assets/{id}", response_description="Asset JSON", response_model=AssetSchema
+    "/assets/{id}", response_description="Asset JSON"
 )
-async def show_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
-    asset = await crud.get(collection, id)
+async def show_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    asset = await crud.get(collection, service, id)
     if asset is not None:
         return asset
 
@@ -172,22 +166,22 @@ async def show_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_c
 @customrouter.post(
     "/assets/{id}/persist", response_description="Persist a temporal asset"
 )
-async def persist_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection)):
-    asset = await crud.get(collection, id)
-    if asset["temporal"]:
-        return await crud.update(collection, id, {"temporal": False})
-
-    raise HTTPException(status_code=404, detail="Asset {id} not found")
+async def persist_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    if (asset := await crud.get(collection, service, id)):
+        if asset["temporal"]:
+            return await crud.update(collection, service, id, {"temporal": False})
+        return asset
+    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
 # TODO: Task to remove unused files
 
 
 @customrouter.get("/clean")
 async def clean_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    assets = await crud.get_all(collection)
+    assets = await crud.get_all(collection, service)
     for asset in assets:
         delete_file(service, asset["_id"])
-        await crud.delete(collection, asset["_id"])
+        await crud.delete(collection, service, asset["_id"])
     return JSONResponse(status_code=status.HTTP_200_OK)
 
 
@@ -198,7 +192,7 @@ async def get_real_assets(service=Depends(get_service)):
 
 @customrouter.get("/files/delete")
 async def delete_unused_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    assets = await crud.get_all(collection)
+    assets = await crud.get_all(collection, service)
     assets_ids = [asset["_id"] for asset in assets]
     files = get_files(service)
     files_ids = [file["id"] for file in files]

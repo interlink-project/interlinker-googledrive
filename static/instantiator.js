@@ -210,29 +210,26 @@ function App() {
       .finally(() => setLoading(false))
   }
 
-  const sendMessage = (data) => {
-    const dataToSend = {}
+  const sendMessage = (code, data) => {
+    const dataToSend = {
+      id: data.id
+    }
     if (inIframe) {
-      dataToSend["id"] = data._id
-      dataToSend["name"] = data.name
-      dataToSend["icon"] = data.iconLink
-      // documentTypes[mimeType].icon
-
       window.parent.postMessage({
-        'code': 'asset_created',
+        'code': code,
         'data': dataToSend
       }, "*");
     } else {
-      dataToSend["id"] = data._id
       setCreated(dataToSend)
     }
   }
+
   const confirmFile = () => {
     setLoading(true)
-    service.confirm(file._id)
+    service.confirm(file.id)
       .then(response => {
         console.log("RESPONSE CONFIRM", response.data);
-        sendMessage(response.data)
+        sendMessage("asset_created", response.data)
       })
       .finally(() => setLoading(false))
   }
@@ -244,7 +241,7 @@ function App() {
     fn(data)
       .then(response => {
         console.log("RESPONSE CREATE", response.data);
-        sendMessage(response.data)
+        sendMessage("asset_created", response.data)
       })
       .finally(() => setLoading(false))
   }

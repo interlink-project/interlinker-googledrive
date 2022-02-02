@@ -32,13 +32,14 @@ def create_empty_file(service, mime_type, name):
     return file
 
 
-def create_file(service, path, name):
+def create_file(service, path):
     mime = magic.Magic(mime=True)
     mime = mime.from_file(path)
     media = MediaFileUpload(path,
                             mimetype=mime,
                             resumable=True)
-    file_metadata = {'name': name}
+    head, tail = os.path.split(path)
+    file_metadata = {'name': tail}
 
     file = service.files().create(body=file_metadata,
                                   media_body=media,

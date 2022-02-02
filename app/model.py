@@ -1,5 +1,8 @@
 from pydantic import BaseModel, Field
 from typing import Optional
+import datetime
+from app.config import settings
+from pydantic import validator
 
 fields = "id, name, webContentLink, webViewLink, thumbnailLink, version, mimeType, size, iconLink, createdTime, modifiedTime"
 
@@ -18,25 +21,34 @@ mime_types = {
 }
 mime_type_options = mime_types.keys()
 
-
-class AssetSchema(BaseModel):
-    id: str = Field(..., alias='_id')
-    temporal: Optional[bool] = True
-    name: Optional[str]
-    webContentLink: Optional[str]
-    webViewLink: Optional[str]
-    thumbnailLink: Optional[str]
-    version: Optional[str]
-    mimeType: Optional[str]
-    size: Optional[str]
-    iconLink: Optional[str]
-    createdTime: Optional[str]
-    modifiedTime: Optional[str]
-
-
 class AssetCreateSchema(BaseModel):
-    mime_type : str
-    name : str
+    mime_type: str
+    name: str
 
-class AssetFromGoogleId(BaseModel):
+
+class AssetBasicDataSchema(BaseModel):
     id: str
+    iconLink: str = Field(alias='icon')
+    createdTime: datetime.datetime = Field(alias='createdAt')
+    modifiedTime: Optional[datetime.datetime] = Field(alias='updatedAt')
+    viewLink: Optional[str]
+    editLink: Optional[str]
+    cloneLink: Optional[str]
+    
+    class Config:
+        allow_population_by_field_name = True
+
+    @validator('viewLink', always=True)
+    def view_link(cls, name, values):
+        asset_id = values["id"]
+        return settings.SERVER_HOST + f"/assets/{asset_id}/view"
+
+    @validator('editLink', always=True)
+    def edit_link(cls, name, values):
+        asset_id = values["id"]
+        return settings.SERVER_HOST + f"/assets/{asset_id}/edit"
+
+    @validator('cloneLink', always=True)
+    def clone_link(cls, name, values):
+        asset_id = values["id"]
+        return settings.SERVER_HOST + f"/assets/{asset_id}/clone"
