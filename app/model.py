@@ -28,6 +28,8 @@ class AssetCreateSchema(BaseModel):
 
 class AssetBasicDataSchema(BaseModel):
     id: str
+    name: str
+    interlinker_name: str = "Google Drive"
     iconLink: str = Field(alias='icon')
     createdTime: datetime.datetime = Field(alias='createdAt')
     modifiedTime: Optional[datetime.datetime] = Field(alias='updatedAt')
