@@ -4,6 +4,8 @@ from app.google import get_file_by_id, copy_file, create_empty_file, create_file
 async def get(collection, service, id: str):
     data = get_file_by_id(service, id)
     db_data = await collection.find_one({"_id": id})
+    if not data or not db_data:
+        return None
     data["temporal"] = db_data["temporal"]
     return data
 
@@ -25,7 +27,8 @@ async def create(collection, service, filepath: str):
     return await common_create(collection, service, googlefile)
 
 async def clone(collection, service, id: str):
-    googlefile = copy_file(service, "newTitle", id)
+    asset = await get(collection, service, id)
+    googlefile = copy_file(service, "Copy of " + asset["name"], id)
     return await common_create(collection, service, googlefile)
 
 async def create_empty(collection, service, mime: str, name: str):

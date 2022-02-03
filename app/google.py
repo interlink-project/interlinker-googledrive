@@ -21,6 +21,7 @@ def get_file_by_id(service, id):
 
 
 def create_empty_file(service, mime_type, name):
+    # TODO: if name contains extension, remove
     file_metadata = {
         'mimeType': mime_type,
         'name': name,
@@ -54,9 +55,12 @@ def create_file(service, path):
 
 
 def copy_file(service, name, id):
+    body = {}
+    if name:
+        body["name"] = name
     try:
         file = service.files().copy(
-            fileId=id, body={'name': name}, fields=fields).execute()
+            fileId=id, body=body, fields=fields).execute()
         set_public(service, file["id"])
         return file
     except Exception as e:
