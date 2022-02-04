@@ -1,3 +1,4 @@
+import json
 import os
 from typing import List, Optional
 
@@ -28,16 +29,20 @@ from app.database import (
 from app.google import delete_file, get_files
 from app.googleservice import close_google_connection, connect_to_google, get_service
 from app.model import (
-    AssetCreateSchema,
     AssetBasicDataSchema,
+    AssetCreateSchema,
     mime_type_options,
     mime_types,
 )
 
-BASE_PATH = os.getenv("BASE_PATH", "")
-
+domainfo = {
+    "PROTOCOL": settings.PROTOCOL,
+    "SERVER_NAME": settings.SERVER_NAME,
+    "BASE_PATH": settings.BASE_PATH,
+    "COMPLETE_SERVER_NAME": settings.COMPLETE_SERVER_NAME
+}
 app = FastAPI(
-    title="Googledrive interlinker API", openapi_url=f"/openapi.json", docs_url="/docs", root_path=BASE_PATH
+    title="Googledrive interlinker API", openapi_url=f"/openapi.json", docs_url="/docs", root_path=settings.BASE_PATH
 )
 app.add_event_handler("startup", connect_to_mongo)
 app.add_event_handler("shutdown", close_mongo_connection)
@@ -62,7 +67,7 @@ mainrouter = APIRouter()
 
 @mainrouter.get("/")
 def main():
-    return RedirectResponse(url=f"{BASE_PATH}/docs")
+    return RedirectResponse(url=f"{settings.BASE_PATH}/docs")
 
 
 @mainrouter.get("/healthcheck")
@@ -88,7 +93,7 @@ async def create_asset(file: Optional[UploadFile] = File(...), collection: Async
     "/assets/instantiate", response_description="GUI for asset creation"
 )
 async def instantiate_asset(request: Request):
-    return templates.TemplateResponse("instantiator.html", {"request": request, "BASE_PATH": BASE_PATH})
+    return templates.TemplateResponse("instantiator.html", {"request": request, "BASE_PATH": settings.BASE_PATH, "DOMAIN_INFO": json.dumps(domainfo)})
 
 
 @integrablerouter.get(
@@ -144,6 +149,7 @@ async def create_empty_asset(asset_in: AssetCreateSchema, collection: AsyncIOMot
         return await crud.create_empty(collection, service, mime, name)
     raise HTTPException(
         status_code=400, detail=f"Mime type {mime_type} not in {mime_type_options}")
+
 
 @customrouter.get(
     "/assets", response_description="List all assets"

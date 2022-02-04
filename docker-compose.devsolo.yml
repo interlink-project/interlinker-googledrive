@@ -9,8 +9,7 @@ services:
     env_file:
       - .env.solo
     environment:
-      - SERVER_NAME=${DOMAIN?Variable not set}
-      - SERVER_HOST=https://${DOMAIN?Variable not set}:${SOLODEVPORT}
+      - SERVER_NAME=${DOMAIN?Variable not set}:${SOLODEVPORT}
       - PORT
       - BASE_PATH=
       - MONGODB_URL=mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@mongodb:27017/${MONGODB_DATABASE}?retryWrites=true&w=majority

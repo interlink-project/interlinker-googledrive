@@ -43,9 +43,9 @@ class AssetBasicDataSchema(BaseModel):
     @validator('viewLink', always=True)
     def view_link(cls, name, values):
         asset_id = values["id"]
-        return settings.SERVER_HOST + f"/assets/{asset_id}/view"
+        return settings.COMPLETE_SERVER_NAME + f"/assets/{asset_id}/view"
 
     @validator('cloneLink', always=True)
     def clone_link(cls, name, values):
         asset_id = values["id"]
-        return settings.SERVER_HOST + f"/assets/{asset_id}/clone"
+        return settings.COMPLETE_SERVER_NAME + f"/assets/{asset_id}/clone"
