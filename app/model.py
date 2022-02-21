@@ -27,25 +27,32 @@ class AssetCreateSchema(BaseModel):
 
 
 class AssetBasicDataSchema(BaseModel):
-    id: str
+    # id: str
     name: str
-    interlinker_name: str = "Google Drive"
     iconLink: str = Field(alias='icon')
     createdTime: datetime.datetime = Field(alias='createdAt')
     modifiedTime: Optional[datetime.datetime] = Field(alias='updatedAt')
-    viewLink: Optional[str]
-    editLink: Optional[str]
-    cloneLink: Optional[str]
     
     class Config:
         allow_population_by_field_name = True
 
+    """
     @validator('viewLink', always=True)
     def view_link(cls, name, values):
         asset_id = values["id"]
         return settings.COMPLETE_SERVER_NAME + f"/assets/{asset_id}/view"
 
+    @validator('editLink', always=True)
+    def edit_link(cls, name, values):
+        asset_id = values["id"]
+        return settings.COMPLETE_SERVER_NAME + f"/assets/{asset_id}/edit"
+    
     @validator('cloneLink', always=True)
     def clone_link(cls, name, values):
         asset_id = values["id"]
         return settings.COMPLETE_SERVER_NAME + f"/assets/{asset_id}/clone"
+    viewLink: Optional[str]
+    editLink: Optional[str]
+    cloneLink: Optional[str]
+    """
+    
