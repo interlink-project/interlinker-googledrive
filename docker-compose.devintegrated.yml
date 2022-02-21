@@ -2,7 +2,7 @@ version: "3.3"
 services:
 
   googledrive:
-    image: 'googledrivedev:${TAG-latest}'
+    image: 'googledrivedev'
     container_name: googledrive-integrated
     volumes:
       - .:/app
