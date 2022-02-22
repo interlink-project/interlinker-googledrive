@@ -39,6 +39,28 @@ const bytesToSize = (bytes, decimals = 2) => {
 };
 
 
+const inIframe = window.location !== window.parent.location
+const hasOpener = window.opener && !window.opener.closed
+
+const sendMessage = (code, data, callback, callbackIframe, callbackOpener) => {
+    if (inIframe) {
+        window.parent.postMessage({
+            'code': code,
+            'message': data
+        }, origin);
+        callbackIframe && callbackIframe()
+    } else if (hasOpener) {
+        window.opener.postMessage({
+            'code': code,
+            'message': data
+        }, origin);
+        callbackOpener && callbackOpener()
+    }else{
+      callback && callback()
+    }
+
+}
+
 class UploadFilesService {
   upload(file, onUploadProgress) {
     let formData = new FormData();
@@ -153,8 +175,6 @@ function App() {
     value: ""
   });
   const [loading, setLoading] = React.useState(false);
-
-  const inIframe = window.location !== window.parent.location
   const maxFiles = 1
 
   var onUploadProgress = (progressEvent) => {
@@ -162,11 +182,7 @@ function App() {
   }
 
   React.useEffect(() => {
-    if (inIframe) {
-      window.parent.postMessage({
-        'code': 'initialized',
-      }, "*");
-    }
+    sendMessage("initialized")
   }, [])
 
   function getIdFromUrl(url) { return url.match(/[-\w]{25,}/); }
@@ -212,26 +228,15 @@ function App() {
       .finally(() => setLoading(false))
   }
 
-  const sendMessage = (code, data) => {
-    const dataToSend = {
-      id: data.id
-    }
-    if (inIframe) {
-      window.parent.postMessage({
-        'code': code,
-        'message': dataToSend
-      }, "*");
-    } else {
-      setCreated(dataToSend)
-    }
-  }
-
   const confirmFile = () => {
     setLoading(true)
     service.confirm(file.id)
       .then(response => {
         console.log("RESPONSE CONFIRM", response.data);
-        sendMessage("asset_created", response.data)
+        const dataToSend = {
+          id: response.data.id
+        }
+        sendMessage("asset_created", dataToSend, () => setCreated(dataToSend), null, window.close)
       })
       .finally(() => setLoading(false))
   }
@@ -242,8 +247,11 @@ function App() {
     const fn = fromId ? service.clone : service.create
     fn(data)
       .then(response => {
-        console.log("RESPONSE CREATE", response.data);
-        sendMessage("asset_created", response.data)
+        console.log("RESPONSE CONFIRM", response.data);
+        const dataToSend = {
+          id: response.data.id
+        }
+        sendMessage("asset_created", dataToSend, () => setCreated(dataToSend), null, window.close)
       })
       .finally(() => setLoading(false))
   }
