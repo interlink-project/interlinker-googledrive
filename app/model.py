@@ -27,7 +27,7 @@ class AssetCreateSchema(BaseModel):
 
 
 class AssetBasicDataSchema(BaseModel):
-    # id: str
+    id: str
     name: str
     iconLink: str = Field(alias='icon')
     createdTime: datetime.datetime = Field(alias='createdAt')

@@ -127,7 +127,7 @@ async def asset_viewer(id: str, collection: AsyncIOMotorCollection = Depends(get
 
 
 @integrablerouter.post(
-    "/assets/{id}/clone", response_description="Asset JSON", status_code=201
+    "/assets/{id}/clone", response_description="Asset JSON", status_code=201, response_model=AssetBasicDataSchema
 )
 async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
     if crud.get(collection, service, id) is not None:
