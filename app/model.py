@@ -30,8 +30,8 @@ class AssetBasicDataSchema(BaseModel):
     id: str
     name: str
     iconLink: str = Field(alias='icon')
-    createdTime: datetime.datetime = Field(alias='createdAt')
-    modifiedTime: Optional[datetime.datetime] = Field(alias='updatedAt')
+    createdTime: datetime.datetime = Field(alias='created_at')
+    modifiedTime: Optional[datetime.datetime] = Field(alias='updated_at')
     
     class Config:
         allow_population_by_field_name = True
