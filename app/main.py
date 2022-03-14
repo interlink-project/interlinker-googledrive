@@ -114,6 +114,14 @@ async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
+@integrablerouter.get(
+    "/assets/{id}/download", response_description="Asset file"
+)
+async def download_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    if (asset := await crud.get(collection, service, id)) is not None:
+        return RedirectResponse(url=asset["webContentLink"])
+    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
+
 
 @integrablerouter.get(
     "/assets/{id}/view", response_description="GUI for interaction with asset"
