@@ -199,7 +199,7 @@ function App() {
   }
 
   React.useEffect(() => {
-    if (!isValidHttpUrl(uri)) {
+    if (uri && !isValidHttpUrl(uri)) {
       setError({
         "key": "uri",
         "value": "URI invalid"
@@ -207,7 +207,6 @@ function App() {
 
 
     } else {
-      console.log(uri, getIdFromUrl(uri)[0])
       setError({
         key: "",
         value: ""
