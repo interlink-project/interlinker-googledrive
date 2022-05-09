@@ -8,6 +8,7 @@ services:
       - .:/app
     env_file:
       - .env
+      - .secrets
     environment:
       - SERVER_NAME=${DOMAIN?Variable not set}
       - PORT

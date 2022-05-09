@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     MONGODB_DATABASE: str
     COLLECTION_NAME: str
     
+    GOOGLE_PROJECT_ID: str
+    GOOGLE_PRIVATE_KEY_ID: str
+    GOOGLE_PRIVATE_KEY: str
+    GOOGLE_CLIENT_EMAIL: str
+    GOOGLE_CLIENT_ID: str
+    
     class Config:
         case_sensitive = True
 

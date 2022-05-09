@@ -28,10 +28,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Decrypt credentials.json.gpg
-        run: |
-          gpg --quiet --batch --yes --decrypt --passphrase="${{ secrets.GOOGLE_API_PW }}" --output credentials.json credentials.json.gpg
-        shell: bash
       - name: Build and push Docker Image
         id: docker_build
         uses: docker/build-push-action@v2
