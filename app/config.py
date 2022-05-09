@@ -39,7 +39,7 @@ GOOGLE_CREDENTIALS = {
         "type": "service_account",
         "project_id":  settings.GOOGLE_PROJECT_ID,
         "private_key_id": settings.GOOGLE_PRIVATE_KEY_ID,
-        "private_key":  settings.GOOGLE_PRIVATE_KEY,
+        "private_key":  settings.GOOGLE_PRIVATE_KEY.replace("\\n", "\n"),
         "client_email":  settings.GOOGLE_CLIENT_EMAIL,
         "client_id":  settings.GOOGLE_CLIENT_ID,
         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
