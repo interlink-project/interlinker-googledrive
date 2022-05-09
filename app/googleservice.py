@@ -3,11 +3,12 @@ import logging
 from itsdangerous import exc
 from apiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
+from app.config import GOOGLE_CREDENTIALS
 
 scope = ['https://www.googleapis.com/auth/drive']
 
-credentials = ServiceAccountCredentials.from_json_keyfile_name(
-    'credentials.json', scope)
+credentials = ServiceAccountCredentials.from_json_keyfile_dict(
+            GOOGLE_CREDENTIALS, scope)
 
 # https://developers.google.com/drive/api/v3/quickstart/python
 

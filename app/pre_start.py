@@ -1,7 +1,7 @@
 import logging
 import json
 from tenacity import after_log, before_log, retry, stop_after_attempt, wait_fixed
-from app.config import settings
+from app.config import settings, GOOGLE_CREDENTIALS
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 # google
 from apiclient.discovery import build
@@ -40,8 +40,8 @@ def waitForDatabase() -> None:
 )
 def waitForDrive() -> None:
     try:
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(
-            'credentials.json', scope)
+        credentials = ServiceAccountCredentials.from_json_keyfile_dict(
+            GOOGLE_CREDENTIALS, scope)
         service = build('drive', 'v3', credentials=credentials)
     except Exception as e:
         logger.error(e)
@@ -50,23 +50,7 @@ def waitForDrive() -> None:
 
 def main() -> None:
     logger.info("Initializing service")
-    credentials = {
-        "type": "service_account",
-        "project_id":  settings.GOOGLE_PROJECT_ID,
-        "private_key_id": settings.GOOGLE_PRIVATE_KEY_ID,
-        "private_key":  settings.GOOGLE_PRIVATE_KEY,
-        "client_email":  settings.GOOGLE_CLIENT_EMAIL,
-        "client_id":  settings.GOOGLE_CLIENT_ID,
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/interlinker%40interlink-deusto.iam.gserviceaccount.com"
-    }
-
-    print(credentials)
-    with open("credentials.json", "w") as json_file:
-        json.dump(credentials, json_file, indent=4)
-
+    print(GOOGLE_CREDENTIALS)
     waitForDatabase()
     logger.info("Services finished initializing")
     client.close()
