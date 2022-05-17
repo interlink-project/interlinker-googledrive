@@ -34,6 +34,7 @@ from app.model import (
     mime_type_options,
     mime_types,
 )
+from app.info import info_data
 
 domainfo = {
     "PROTOCOL": settings.PROTOCOL,
@@ -69,6 +70,9 @@ mainrouter = APIRouter()
 def main():
     return RedirectResponse(url=f"{settings.BASE_PATH}/docs")
 
+@mainrouter.get("/info")
+def main():
+    return info_data
 
 @mainrouter.get("/healthcheck")
 def healthcheck():

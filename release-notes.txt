@@ -1,0 +1,6 @@
+NEW
+• Info endpoint
+
+IMPROVED
+
+FIXED
