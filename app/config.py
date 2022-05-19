@@ -1,16 +1,10 @@
 import secrets
-from typing import Any, Dict, List, Optional, Union
+from typing import List
 
-from pydantic import AnyHttpUrl, BaseSettings, EmailStr, HttpUrl, PostgresDsn, validator
+from pydantic import AnyHttpUrl, BaseSettings
 import os
 
-mode = os.getenv("MODE", "")
 class Settings(BaseSettings):
-    MODE: str
-    MODE_SOLO: bool = mode == "solo"
-    MODE_INTEGRATED: bool = mode == "integrated"
-    MODE_PRODUCTION: bool = mode == "production"
-
     API_V1_STR: str = "/api/v1"
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
     SECRET_KEY: str = secrets.token_urlsafe(32)

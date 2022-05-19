@@ -111,7 +111,8 @@ async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_c
 
 @integrablerouter.delete("/assets/{id}", response_description="No content")
 async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    if crud.get(collection, service, id) is not None:
+    if await crud.get(collection, service, id) is not None:
+        delete_file(service=service, id=id)
         delete_result = await crud.delete(collection, service, id)
         if delete_result.deleted_count == 1:
             return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
@@ -123,7 +124,9 @@ async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get
 )
 async def download_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
     if (asset := await crud.get(collection, service, id)) is not None:
-        return RedirectResponse(url=asset["webContentLink"])
+        if "webContentLink" in asset:
+            return RedirectResponse(url=asset["webContentLink"])
+        return JSONResponse({"error": "Could not download this resource. Try again later."})
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
 
@@ -142,7 +145,7 @@ async def asset_viewer(id: str, collection: AsyncIOMotorCollection = Depends(get
     "/assets/{id}/clone", response_description="Asset JSON", status_code=201, response_model=AssetBasicDataSchema
 )
 async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    if crud.get(collection, service, id) is not None:
+    if await crud.get(collection, service, id) is not None:
         return await crud.clone(collection, service, id)
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")

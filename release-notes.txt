@@ -1,6 +1,10 @@
+VERSION v1.0.2
+
 NEW
 • Info endpoint
 
 IMPROVED
 
 FIXED
+• Await crud operations
+• Httpx upgraded

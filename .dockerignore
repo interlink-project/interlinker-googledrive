@@ -4,3 +4,4 @@ Dockerfile*
 Makefile
 .env*
 README*
+.github/**
