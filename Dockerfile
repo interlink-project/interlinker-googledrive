@@ -14,7 +14,6 @@ FROM poetry-base as builder
 WORKDIR /app/
 # Copy poetry.lock* in case it doesn't exist in the repo
 COPY ./pyproject.toml ./poetry.lock* /app/
-RUN pip install --no-cache-dir Werkzeug python-magic google-api-python-client google-auth-httplib2 google-auth-oauthlib oauth2client
 COPY . /app
 ENV PYTHONPATH=/app
 
