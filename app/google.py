@@ -74,7 +74,7 @@ def delete_file(service, id):
 def set_public(service, file_id):
     user_permission = {
         'type': 'anyone',
-        'role': 'writer',
+        'role': 'reader',
     }
     perm = service.permissions().create(
         fileId=file_id,
@@ -84,9 +84,10 @@ def set_public(service, file_id):
     return perm
 
 def remove_permissions(service, file_id):
-    for permission in service.permissions().list(fileId=file_id).execute().get("permissions", []):
-        print("GOT", permission)
-        # service.permissions().delete(fileId=file_id, permissionId=permission.get("id"))
+    permissions = service.permissions().list(fileId=file_id).execute().get("permissions", [])
+    for permission in permissions:
+        if not permission.get("role", "owner") == "owner":
+            service.permissions().delete(fileId=file_id, permissionId=permission.get("id")).execute()
 
 def add_permission(service, email, role, file_id):
     user_permission = {
@@ -96,6 +97,7 @@ def add_permission(service, email, role, file_id):
         }
     perm = service.permissions().create(
         fileId=file_id,
+        sendNotificationEmail=False,
         body=user_permission,
         fields='id',
     ).execute()

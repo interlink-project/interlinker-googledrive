@@ -1,5 +1,5 @@
 from fastapi.encoders import jsonable_encoder
-from app.google import get_file_by_id, copy_file, create_empty_file, create_file
+from app.google import get_file_by_id, copy_file, create_empty_file, create_file, remove_permissions, add_permission
 
 async def get(collection, service, id: str):
     data = get_file_by_id(service, id)
@@ -40,7 +40,10 @@ async def update(collection, service, id: str, data):
     return await get(collection, service, id)
 
 async def sync_users(service, file_id, users_info):
-    print(file_id, users_info)
+    print("EOOO", users_info)
+    remove_permissions(service, file_id=file_id)
+    for data in users_info:
+        add_permission(service, email=data.get("email"), role="writer" if data.get("access_assets_permission", False) else "reader", file_id=file_id)
     return
 
 async def delete(collection, service, id: str):

@@ -165,11 +165,11 @@ async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
 @integrablerouter.post(
-    "/assets/{id}/sync_users", response_description="Asset JSON", status_code=201, response_model=AssetBasicDataSchema
+    "/assets/{id}/sync_users", response_description="Asset JSON", status_code=200
 )
-async def sync_users(id: str, request: Request, service=Depends(get_service), payload: Any = Body(...)):
+async def sync_users(id: str, request: Request, service=Depends(get_service), payload: list = Body(...)):
     print(request.client.host)
-    return await crud.sync_users(service, id, payload)
+    return await crud.sync_users(service=service, file_id=id, users_info=payload)
 
 
 # Custom endpoints (have a /api/v1 prefix)
