@@ -83,7 +83,24 @@ def set_public(service, file_id):
     ).execute()
     return perm
 
+def remove_permissions(service, file_id):
+    for permission in service.permissions().list(fileId=file_id).execute().get("permissions", []):
+        print("GOT", permission)
+        # service.permissions().delete(fileId=file_id, permissionId=permission.get("id"))
 
+def add_permission(service, email, role, file_id):
+    user_permission = {
+            'type': 'user',
+            'role': role,
+            'emailAddress': email
+        }
+    perm = service.permissions().create(
+        fileId=file_id,
+        body=user_permission,
+        fields='id',
+    ).execute()
+    return perm
+    
 def clean(service):
     print("Syncing (cleaning)")
     # Delete all files in drive that are not attached to any DriveAsset obj

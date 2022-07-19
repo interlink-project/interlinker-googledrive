@@ -1,6 +1,6 @@
 import json
 import os
-from typing import List, Optional
+from typing import Any, Optional
 
 from fastapi import (
     APIRouter,
@@ -11,14 +11,15 @@ from fastapi import (
     Request,
     UploadFile,
     status,
+    Body
 )
-from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.cors import CORSMiddleware
 
 import app.crud as crud
+from app import deps
 from app.config import settings
 from app.database import (
     AsyncIOMotorCollection,
@@ -28,13 +29,13 @@ from app.database import (
 )
 from app.google import delete_file, get_files
 from app.googleservice import close_google_connection, connect_to_google, get_service
+from app.info import info_data
 from app.model import (
     AssetBasicDataSchema,
     AssetCreateSchema,
     mime_type_options,
     mime_types,
 )
-from app.info import info_data
 
 domainfo = {
     "PROTOCOL": settings.PROTOCOL,
@@ -70,9 +71,11 @@ mainrouter = APIRouter()
 def main():
     return RedirectResponse(url=f"{settings.BASE_PATH}/docs")
 
+
 @mainrouter.get("/info")
 def main():
     return info_data
+
 
 @mainrouter.get("/healthcheck")
 def healthcheck():
@@ -82,8 +85,13 @@ def healthcheck():
 integrablerouter = APIRouter()
 
 
+def check_permission(action, user_id, asset_id = None):
+    return True
+
 @integrablerouter.post("/assets", response_description="Add new asset", status_code=201)
-async def create_asset(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+async def create_asset(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+    check_permission("list", user_id)
+
     file_name = os.getcwd()+"/tmp/"+file.filename.replace(" ", "-")
     with open(file_name, 'wb+') as f:
         f.write(file.file.read())
@@ -103,14 +111,16 @@ async def instantiate_asset(request: Request):
 @integrablerouter.get(
     "/assets/{id}", response_description="Asset JSON", response_model=AssetBasicDataSchema
 )
-async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+    check_permission("get", user_id=user_id, asset_id=id)
     if (asset := await crud.get(collection, service, id)) is not None:
         return asset
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
 
 @integrablerouter.delete("/assets/{id}", response_description="No content")
-async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+    check_permission("delete", user_id=user_id, asset_id=id)
     if await crud.get(collection, service, id) is not None:
         delete_file(service=service, id=id)
         delete_result = await crud.delete(collection, service, id)
@@ -119,10 +129,12 @@ async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
+
 @integrablerouter.get(
     "/assets/{id}/download", response_description="Asset file"
 )
-async def download_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+async def download_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+    check_permission("get", user_id=user_id, asset_id=id)
     if (asset := await crud.get(collection, service, id)) is not None:
         if "webContentLink" in asset:
             return RedirectResponse(url=asset["webContentLink"])
@@ -133,7 +145,8 @@ async def download_asset(id: str, collection: AsyncIOMotorCollection = Depends(g
 @integrablerouter.get(
     "/assets/{id}/view", response_description="GUI for interaction with asset"
 )
-async def asset_viewer(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+async def asset_viewer(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+    check_permission("edit", user_id=user_id, asset_id=id)
     asset = await crud.get(collection, service, id)
     if asset is not None:
         return RedirectResponse(url=asset["webViewLink"])
@@ -144,11 +157,19 @@ async def asset_viewer(id: str, collection: AsyncIOMotorCollection = Depends(get
 @integrablerouter.post(
     "/assets/{id}/clone", response_description="Asset JSON", status_code=201, response_model=AssetBasicDataSchema
 )
-async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+    check_permission("edit", user_id=user_id, asset_id=id)
     if await crud.get(collection, service, id) is not None:
         return await crud.clone(collection, service, id)
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
+
+@integrablerouter.post(
+    "/assets/{id}/sync_users", response_description="Asset JSON", status_code=201, response_model=AssetBasicDataSchema
+)
+async def sync_users(id: str, request: Request, service=Depends(get_service), payload: Any = Body(...)):
+    print(request.client.host)
+    return await crud.sync_users(service, id, payload)
 
 
 # Custom endpoints (have a /api/v1 prefix)

@@ -39,5 +39,9 @@ async def update(collection, service, id: str, data):
     await collection.update_one( { "_id": id }, { "$set": data })
     return await get(collection, service, id)
 
+async def sync_users(service, file_id, users_info):
+    print(file_id, users_info)
+    return
+
 async def delete(collection, service, id: str):
     return await collection.delete_one({"_id": id})
