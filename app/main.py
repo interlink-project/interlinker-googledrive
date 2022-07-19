@@ -85,7 +85,7 @@ def healthcheck():
 integrablerouter = APIRouter()
 
 @integrablerouter.post("/assets", response_description="Add new asset", status_code=201)
-async def create_asset(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+async def create_asset(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
 
     file_name = os.getcwd()+"/tmp/"+file.filename.replace(" ", "-")
     with open(file_name, 'wb+') as f:
@@ -113,8 +113,9 @@ async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_c
 
 
 @integrablerouter.delete("/assets/{id}", response_description="No content")
-async def delete_asset(id: str, request: Request, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    print(request.client.host)
+async def delete_asset(id: str, request: Request, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), token=Depends(deps.get_token_in_header)):
+    if token != settings.BACKEND_SECRET:
+        raise HTTPException(status_code=403)
     
     if await crud.get(collection, service, id) is not None:
         delete_file(service=service, id=id)

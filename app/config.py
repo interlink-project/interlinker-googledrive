@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
     SECRET_KEY: str = secrets.token_urlsafe(32)
+    BACKEND_SECRET: str
     
     PROTOCOL: str
     SERVER_NAME: str
