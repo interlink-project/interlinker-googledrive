@@ -40,7 +40,7 @@ async def update(collection, service, id: str, data):
     return await get(collection, service, id)
 
 async def sync_users(service, file_id, users_info):
-    print("EOOO", users_info)
+    print("Syncing document users with", users_info)
     remove_permissions(service, file_id=file_id)
     for data in users_info:
         add_permission(service, email=data.get("email"), role="writer" if data.get("access_assets_permission", False) else "reader", file_id=file_id)

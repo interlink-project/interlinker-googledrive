@@ -84,13 +84,8 @@ def healthcheck():
 
 integrablerouter = APIRouter()
 
-
-def check_permission(action, user_id, asset_id = None):
-    return True
-
 @integrablerouter.post("/assets", response_description="Add new asset", status_code=201)
 async def create_asset(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
-    check_permission("list", user_id)
 
     file_name = os.getcwd()+"/tmp/"+file.filename.replace(" ", "-")
     with open(file_name, 'wb+') as f:
@@ -112,15 +107,15 @@ async def instantiate_asset(request: Request):
     "/assets/{id}", response_description="Asset JSON", response_model=AssetBasicDataSchema
 )
 async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
-    check_permission("get", user_id=user_id, asset_id=id)
     if (asset := await crud.get(collection, service, id)) is not None:
         return asset
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
 
 @integrablerouter.delete("/assets/{id}", response_description="No content")
-async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
-    check_permission("delete", user_id=user_id, asset_id=id)
+async def delete_asset(id: str, request: Request, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    print(request.client.host)
+    
     if await crud.get(collection, service, id) is not None:
         delete_file(service=service, id=id)
         delete_result = await crud.delete(collection, service, id)
@@ -134,7 +129,6 @@ async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get
     "/assets/{id}/download", response_description="Asset file"
 )
 async def download_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
-    check_permission("get", user_id=user_id, asset_id=id)
     if (asset := await crud.get(collection, service, id)) is not None:
         if "webContentLink" in asset:
             return RedirectResponse(url=asset["webContentLink"])
@@ -146,7 +140,6 @@ async def download_asset(id: str, collection: AsyncIOMotorCollection = Depends(g
     "/assets/{id}/view", response_description="GUI for interaction with asset"
 )
 async def asset_viewer(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
-    check_permission("edit", user_id=user_id, asset_id=id)
     asset = await crud.get(collection, service, id)
     if asset is not None:
         return RedirectResponse(url=asset["webViewLink"])
@@ -158,7 +151,6 @@ async def asset_viewer(id: str, collection: AsyncIOMotorCollection = Depends(get
     "/assets/{id}/clone", response_description="Asset JSON", status_code=201, response_model=AssetBasicDataSchema
 )
 async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
-    check_permission("edit", user_id=user_id, asset_id=id)
     if await crud.get(collection, service, id) is not None:
         return await crud.clone(collection, service, id)
 
