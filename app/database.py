@@ -6,13 +6,21 @@ import os
 MAX_CONNECTIONS_COUNT = int(os.getenv("MAX_CONNECTIONS_COUNT", 10))
 MIN_CONNECTIONS_COUNT = int(os.getenv("MIN_CONNECTIONS_COUNT", 10))
 
+
 class DataBase:
     client: AsyncIOMotorClient = None
 
+
 db = DataBase()
+
 
 async def get_collection() -> AsyncIOMotorCollection:
     return db.client[settings.MONGODB_DATABASE][settings.COLLECTION_NAME]
+
+
+async def get_users_collection() -> AsyncIOMotorCollection:
+    return db.client[settings.MONGODB_DATABASE]["users"]
+
 
 async def connect_to_mongo():
     logging.info("Connecting to database...")

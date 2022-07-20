@@ -84,6 +84,7 @@ def healthcheck():
 
 integrablerouter = APIRouter()
 
+
 @integrablerouter.post("/assets", response_description="Add new asset", status_code=201)
 async def create_asset(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
 
@@ -116,7 +117,7 @@ async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_c
 async def delete_asset(id: str, request: Request, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), token=Depends(deps.get_token_in_header)):
     if token != settings.BACKEND_SECRET:
         raise HTTPException(status_code=403)
-    
+
     if await crud.get(collection, service, id) is not None:
         delete_file(service=service, id=id)
         delete_result = await crud.delete(collection, service, id)
@@ -157,12 +158,13 @@ async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
+
 @integrablerouter.post(
     "/assets/{id}/sync_users", response_description="Asset JSON", status_code=200
 )
-async def sync_users(id: str, request: Request, service=Depends(get_service), payload: list = Body(...)):
+async def sync_users(id: str, request: Request, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), payload: list = Body(...)):
     print(request.client.host)
-    return await crud.sync_users(service=service, file_id=id, users_info=payload)
+    return await crud.sync_users(collection=collection, service=service, file_id=id, users_info=payload)
 
 
 # Custom endpoints (have a /api/v1 prefix)

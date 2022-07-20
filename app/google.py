@@ -83,25 +83,28 @@ def set_public(service, file_id):
     ).execute()
     return perm
 
-def remove_permissions(service, file_id):
-    permissions = service.permissions().list(fileId=file_id).execute().get("permissions", [])
-    for permission in permissions:
-        if not permission.get("role", "owner") == "owner":
-            service.permissions().delete(fileId=file_id, permissionId=permission.get("id")).execute()
+def get_permissions(service, file_id):
+    return service.permissions().list(fileId=file_id, fields="*").execute().get("permissions", [])
 
-def add_permission(service, email, role, file_id):
-    user_permission = {
-            'type': 'user',
-            'role': role,
-            'emailAddress': email
-        }
-    perm = service.permissions().create(
-        fileId=file_id,
-        sendNotificationEmail=False,
-        body=user_permission,
-        fields='id',
-    ).execute()
-    return perm
+def remove_permission(service, file_id, permission_id):
+    return service.permissions().delete(fileId=file_id, permissionId=permission_id).execute()
+
+def add_permission(service, emails, role, file_id):
+    results = []
+    for email in emails:
+        user_permission = {
+                'type': 'user',
+                'role': role,
+                'emailAddress': email
+            }
+        perm = service.permissions().create(
+            fileId=file_id,
+            sendNotificationEmail=False,
+            body=user_permission,
+            fields='id',
+        ).execute()
+        results.append(perm)
+    return results
     
 def clean(service):
     print("Syncing (cleaning)")
