@@ -138,21 +138,30 @@ async def download_asset(id: str, collection: AsyncIOMotorCollection = Depends(g
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
 
+# @integrablerouter.get(
+#     "/assets/{id}/view", response_description="GUI for interaction with asset"
+# )
+# async def asset_viewer(id: str, request : Request, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+#     user = await crud.get_user(id=user_id)
+#     asset = await crud.get(collection, service, id)
+#     if asset is not None:
+#         return templates.TemplateResponse("redirector.html", {"request": request, "BASE_PATH": settings.BASE_PATH, "DOMAIN_INFO": json.dumps(domainfo), "DATA": json.dumps({
+#             "redirectUrl": asset["webViewLink"],
+#             "user": user,
+#             "config": user.get(crud.INTERLINKER_NAME)
+#         })})
+
+#     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
+
 @integrablerouter.get(
     "/assets/{id}/view", response_description="GUI for interaction with asset"
 )
-async def asset_viewer(id: str, request : Request, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
-    user = await crud.get_user(id=user_id)
+async def asset_viewer(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
     asset = await crud.get(collection, service, id)
     if asset is not None:
-        return templates.TemplateResponse("redirector.html", {"request": request, "BASE_PATH": settings.BASE_PATH, "DOMAIN_INFO": json.dumps(domainfo), "DATA": json.dumps({
-            "redirectUrl": asset["webViewLink"],
-            "user": user,
-            "config": user.get(crud.INTERLINKER_NAME)
-        })})
+        return RedirectResponse(url=asset["webViewLink"])
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
-
 
 @integrablerouter.post(
     "/assets/{id}/clone", response_description="Asset JSON", status_code=201, response_model=AssetBasicDataSchema
