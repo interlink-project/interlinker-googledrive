@@ -8,7 +8,11 @@ async def get_user(id: str):
     collection = await get_users_collection()
     return await collection.find_one({"_id": id})
 
-async def update_user(id: str, data):
+async def get_user_config(id: str):
+    user = await get_user(id)
+    return user.get(INTERLINKER_NAME, {})
+
+async def update_user_config(id: str, data):
     collection = await get_users_collection()
     await collection.update_one( { "_id": id }, { "$set": {INTERLINKER_NAME: jsonable_encoder(data)} })
     return await get_user(id)
@@ -56,12 +60,6 @@ async def update(collection, service, id: str, data):
     await collection.update_one( { "_id": id }, { "$set": jsonable_encoder(data) })
     return await get(collection, service, id)
 
-async def add_additional_email(user_id, email):
-    user : dict = await get_user(user_id)
-    config = user.get(INTERLINKER_NAME, {})
-    config["additionalEmails"] = config.get("additionalEmails", []) + [email]
-    return await update_user(user_id, config)
-
 async def sync_users(collection, service, file_id, users_info):
     print("Syncing document users with", users_info)
     new_acl = []
@@ -78,6 +76,13 @@ async def sync_users(collection, service, file_id, users_info):
 
     await update_file_permissions(service, file_id, new_acl)
 
+
+async def get_files_for_user(collection, user_id):
+    return await collection.find({
+        "acl": {
+            "$elemMatch": {"id": user_id}}
+        }
+    ).to_list(1000)
 
 async def update_file_permissions(service, file_id, acl):
     # clear permissions
@@ -98,7 +103,7 @@ async def update_file_permissions(service, file_id, acl):
         ]
         """
         user : dict = await get_user(id=acl_entry.get("id"))
-        add_permission(service, emails=[user.get("email")] + user.get("additionalEmails", []), role="writer", file_id=file_id)
+        add_permission(service, emails=[user.get("email")] + user.get(INTERLINKER_NAME, {}).get("additionalEmails", []), role="writer", file_id=file_id)
     return
 
 async def delete(collection, service, id: str):
