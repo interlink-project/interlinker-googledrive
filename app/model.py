@@ -17,7 +17,7 @@ mime_types = {
     "slide": "application/vnd.google-apps.presentation",
     "script": "application/vnd.google-apps.script",
     "site": "application/vnd.google-apps.site",
-    "spreadsheet": "application/vnd.google-apps.spreadsheet",
+    "jamboard": "application/vnd.google-apps.jam",
 }
 mime_type_options = mime_types.keys()
 

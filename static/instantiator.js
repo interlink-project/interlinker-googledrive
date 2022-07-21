@@ -290,7 +290,22 @@ function App() {
       "value": "form",
       "label": "Form",
       "icon": "https://ssl.gstatic.com/docs/doclist/images/mediatype/icon_1_form_x32.png"
-    }
+    },
+    "jamboard": {
+      "value": "jamboard",
+      "label": "Jamboard",
+      "icon": "https://cdn-icons-png.flaticon.com/512/2965/2965289.png"
+    },
+    // "map": {
+    //   "value": "map",
+    //   "label": "Map",
+    //   "icon": "https://ssl.gstatic.com/docs/doclist/images/mediatype/icon_1_map_x32.png"
+    // },
+    // "fusiontable": {
+    //   "value": "fusiontable",
+    //   "label": "Fusion table",
+    //   "icon": ""
+    // }
   }
   // src={file.webViewLink}
   // src={`https://docs.google.com/gview?url=${file.webContentLink}&embedded=true`}

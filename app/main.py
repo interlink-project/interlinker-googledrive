@@ -207,7 +207,7 @@ async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_c
 
 
 @integrablerouter.delete("/assets/{id}", response_description="No content")
-async def delete_asset(id: str, request: Request, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), token=Depends(deps.get_token_in_header)):
+async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), token=Depends(deps.get_token_in_header)):
     if token != settings.BACKEND_SECRET:
         raise HTTPException(status_code=403)
 
