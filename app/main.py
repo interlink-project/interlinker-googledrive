@@ -87,27 +87,6 @@ def healthcheck():
 # Custom endpoints (have a /api/v1 prefix)
 customrouter = APIRouter()
 
-
-@customrouter.get(
-    "/config", response_description="GUI for setting config"
-)
-async def config_editor(request : Request, user_id=Depends(deps.get_current_user_id)):
-    user = await crud.get_user(id=user_id)
-    return templates.TemplateResponse("config.html", {"request": request, "BASE_PATH": settings.BASE_PATH, "DOMAIN_INFO": json.dumps(domainfo), "DATA": json.dumps({
-        "user": user,
-        "config": user.get(crud.INTERLINKER_NAME)
-    })})
-
-@customrouter.post("/setAdditionalEmails", status_code=200)
-async def add_additional_emails(background_tasks: BackgroundTasks, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), emails: list = Body(...), user_id = Depends(deps.get_current_user_id)):
-    config = await crud.get_user_config(user_id)
-    config["additionalEmails"] = emails
-
-    # update the existing files
-    files = await crud.get_files_for_user(collection, user_id)
-    for file in files:
-        background_tasks.add_task(crud.update_file_permissions, service=service, file_id=file.get("_id"), acl=file.get("acl"))
-
 @customrouter.post("/assets/empty", response_description="Asset JSON", status_code=201)
 async def create_empty_asset(asset_in: AssetCreateSchema, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
     mime_type = asset_in.mime_type
@@ -229,22 +208,6 @@ async def download_asset(id: str, collection: AsyncIOMotorCollection = Depends(g
             return RedirectResponse(url=asset["webContentLink"])
         return JSONResponse({"error": "Could not download this resource. Try again later."})
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
-
-
-# @integrablerouter.get(
-#     "/assets/{id}/view", response_description="GUI for interaction with asset"
-# )
-# async def asset_viewer(id: str, request : Request, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
-#     user = await crud.get_user(id=user_id)
-#     asset = await crud.get(collection, service, id)
-#     if asset is not None:
-#         return templates.TemplateResponse("redirector.html", {"request": request, "BASE_PATH": settings.BASE_PATH, "DOMAIN_INFO": json.dumps(domainfo), "DATA": json.dumps({
-#             "redirectUrl": asset["webViewLink"],
-#             "user": user,
-#             "config": user.get(crud.INTERLINKER_NAME)
-#         })})
-
-#     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
 @integrablerouter.get(
     "/assets/{id}/view", response_description="GUI for interaction with asset"

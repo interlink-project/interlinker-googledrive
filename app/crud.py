@@ -1,21 +1,5 @@
 from fastapi.encoders import jsonable_encoder
 from app.google import get_file_by_id, copy_file, create_empty_file, create_file, get_permissions , remove_permission, add_permission
-from app.database import get_users_collection
-
-INTERLINKER_NAME = "googledrive"
-
-async def get_user(id: str):
-    collection = await get_users_collection()
-    return await collection.find_one({"_id": id})
-
-async def get_user_config(id: str):
-    user = await get_user(id)
-    return user.get(INTERLINKER_NAME, {})
-
-async def update_user_config(id: str, data):
-    collection = await get_users_collection()
-    await collection.update_one( { "_id": id }, { "$set": {INTERLINKER_NAME: jsonable_encoder(data)} })
-    return await get_user(id)
 
 async def get_only_db(collection, id: str):
     return await collection.find_one({"_id": id})
@@ -67,7 +51,7 @@ async def sync_users(collection, service, file_id, users_info):
     for user_entry in users_info:
         new_acl.append({
             "id": user_entry.get("id"),
-            "email": user_entry.get("email")
+            "emails": user_entry.get("emails")
         })
 
     await update(collection, service, file_id, {
@@ -98,14 +82,14 @@ async def update_file_permissions(service, file_id, acl):
         [
             {
                 "id": ...
-                "email": ...
+                "emails": ...
             }
             ...
         ]
         """
-        user : dict = await get_user(id=acl_entry.get("id"))
-        add_permission(service, emails=[user.get("email")] + user.get(INTERLINKER_NAME, {}).get("additionalEmails", []), role="writer", file_id=file_id)
+        for email in acl_entry.get("emails"):
+            add_permission(service, email=email, role="writer", file_id=file_id)
     return
 
-async def delete(collection, service, id: str):
+async def delete(collection, id: str):
     return await collection.delete_one({"_id": id})

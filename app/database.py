@@ -18,10 +18,6 @@ async def get_collection() -> AsyncIOMotorCollection:
     return db.client[settings.MONGODB_DATABASE][settings.COLLECTION_NAME]
 
 
-async def get_users_collection() -> AsyncIOMotorCollection:
-    return db.client[settings.MONGODB_DATABASE]["users"]
-
-
 async def connect_to_mongo():
     logging.info("Connecting to database...")
     db.client = AsyncIOMotorClient(settings.MONGODB_URL,
