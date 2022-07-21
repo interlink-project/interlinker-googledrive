@@ -85,6 +85,7 @@ async def get_files_for_user(collection, user_id):
     ).to_list(1000)
 
 async def update_file_permissions(service, file_id, acl):
+    print("Updating permissions of", file_id)
     # clear permissions
     permissions = get_permissions(service, file_id)
     for permission in permissions:

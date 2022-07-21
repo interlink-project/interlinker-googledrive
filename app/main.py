@@ -11,7 +11,8 @@ from fastapi import (
     Request,
     UploadFile,
     status,
-    Body
+    Body,
+    BackgroundTasks
 )
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -81,6 +82,98 @@ def main():
 def healthcheck():
     return True
 
+
+
+# Custom endpoints (have a /api/v1 prefix)
+customrouter = APIRouter()
+
+
+@customrouter.get(
+    "/config", response_description="GUI for setting config"
+)
+async def config_editor(request : Request, user_id=Depends(deps.get_current_user_id)):
+    user = await crud.get_user(id=user_id)
+    return templates.TemplateResponse("config.html", {"request": request, "BASE_PATH": settings.BASE_PATH, "DOMAIN_INFO": json.dumps(domainfo), "DATA": json.dumps({
+        "user": user,
+        "config": user.get(crud.INTERLINKER_NAME)
+    })})
+
+@customrouter.post("/setAdditionalEmails", status_code=200)
+async def add_additional_emails(background_tasks: BackgroundTasks, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), emails: list = Body(...), user_id = Depends(deps.get_current_user_id)):
+    config = await crud.get_user_config(user_id)
+    config["additionalEmails"] = emails
+
+    # update the existing files
+    files = await crud.get_files_for_user(collection, user_id)
+    for file in files:
+        background_tasks.add_task(crud.update_file_permissions, service=service, file_id=file.get("_id"), acl=file.get("acl"))
+
+@customrouter.post("/assets/empty", response_description="Asset JSON", status_code=201)
+async def create_empty_asset(asset_in: AssetCreateSchema, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    mime_type = asset_in.mime_type
+    name = asset_in.name
+    if mime_type in mime_type_options:
+        mime = mime_types[mime_type]
+        return await crud.create_empty(collection, service, mime, name)
+    raise HTTPException(
+        status_code=400, detail=f"Mime type {mime_type} not in {mime_type_options}")
+
+
+@customrouter.get(
+    "/assets", response_description="List all assets"
+)
+async def list_assets(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    return await crud.get_all(collection, service)
+
+
+@customrouter.get(
+    "/assets/{id}", response_description="Asset JSON"
+)
+async def show_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    asset = await crud.get(collection, service, id)
+    if asset is not None:
+        return asset
+
+    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
+
+
+@customrouter.post(
+    "/assets/{id}/persist", response_description="Persist a temporal asset"
+)
+async def persist_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    if (asset := await crud.get(collection, service, id)):
+        if asset["temporal"]:
+            return await crud.update(collection, service, id, {"temporal": False})
+        return asset
+    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
+
+# TODO: Task to remove unused files
+
+
+@customrouter.get("/clean")
+async def clean_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    assets = await crud.get_all(collection, service)
+    for asset in assets:
+        delete_file(service, asset["_id"])
+        await crud.delete(collection, service, asset["_id"])
+    return JSONResponse(status_code=status.HTTP_200_OK)
+
+
+@customrouter.get("/files/real")
+async def get_real_assets(service=Depends(get_service)):
+    return JSONResponse(status_code=status.HTTP_200_OK, content=get_files(service))
+
+
+@customrouter.get("/files/delete")
+async def delete_unused_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    assets = await crud.get_all(collection, service)
+    assets_ids = [asset["_id"] for asset in assets]
+    files = get_files(service)
+    files_ids = [file["id"] for file in files]
+    matches = [el for el in files_ids if el not in assets_ids]
+    for id in matches:
+        delete_file(service, id)
+    return JSONResponse(status_code=status.HTTP_200_OK)
 
 integrablerouter = APIRouter()
 
@@ -180,89 +273,6 @@ async def sync_users(id: str, request: Request, collection: AsyncIOMotorCollecti
     print(request.client.host)
     return await crud.sync_users(collection=collection, service=service, file_id=id, users_info=payload)
 
-
-# Custom endpoints (have a /api/v1 prefix)
-customrouter = APIRouter()
-
-
-@customrouter.post("/setAdditionalEmails", status_code=200)
-async def add_additional_emails(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), emails: list = Body(...), user_id = Depends(deps.get_current_user_id)):
-    config = await crud.get_user_config(user_id)
-    config["additionalEmails"] = emails
-    print(await crud.update_user_config(user_id, config))
-
-    # update the existing files
-    files = await crud.get_files_for_user(collection, user_id)
-    for file in files:
-        print(file)
-        await crud.update_file_permissions(service=service, file_id=file.get("_id"), acl=file.get("acl"))
-
-@customrouter.post("/assets/empty", response_description="Asset JSON", status_code=201)
-async def create_empty_asset(asset_in: AssetCreateSchema, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    mime_type = asset_in.mime_type
-    name = asset_in.name
-    if mime_type in mime_type_options:
-        mime = mime_types[mime_type]
-        return await crud.create_empty(collection, service, mime, name)
-    raise HTTPException(
-        status_code=400, detail=f"Mime type {mime_type} not in {mime_type_options}")
-
-
-@customrouter.get(
-    "/assets", response_description="List all assets"
-)
-async def list_assets(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    return await crud.get_all(collection, service)
-
-
-@customrouter.get(
-    "/assets/{id}", response_description="Asset JSON"
-)
-async def show_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    asset = await crud.get(collection, service, id)
-    if asset is not None:
-        return asset
-
-    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
-
-
-@customrouter.post(
-    "/assets/{id}/persist", response_description="Persist a temporal asset"
-)
-async def persist_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    if (asset := await crud.get(collection, service, id)):
-        if asset["temporal"]:
-            return await crud.update(collection, service, id, {"temporal": False})
-        return asset
-    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
-
-# TODO: Task to remove unused files
-
-
-@customrouter.get("/clean")
-async def clean_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    assets = await crud.get_all(collection, service)
-    for asset in assets:
-        delete_file(service, asset["_id"])
-        await crud.delete(collection, service, asset["_id"])
-    return JSONResponse(status_code=status.HTTP_200_OK)
-
-
-@customrouter.get("/files/real")
-async def get_real_assets(service=Depends(get_service)):
-    return JSONResponse(status_code=status.HTTP_200_OK, content=get_files(service))
-
-
-@customrouter.get("/files/delete")
-async def delete_unused_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    assets = await crud.get_all(collection, service)
-    assets_ids = [asset["_id"] for asset in assets]
-    files = get_files(service)
-    files_ids = [file["id"] for file in files]
-    matches = [el for el in files_ids if el not in assets_ids]
-    for id in matches:
-        delete_file(service, id)
-    return JSONResponse(status_code=status.HTTP_200_OK)
 
 app.include_router(mainrouter, tags=["main"])
 app.include_router(integrablerouter, tags=["Integrable"])
