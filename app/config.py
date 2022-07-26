@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     GOOGLE_PRIVATE_KEY: str
     GOOGLE_CLIENT_EMAIL: str
     GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_X509: str
     
     class Config:
         case_sensitive = True
@@ -40,5 +41,5 @@ GOOGLE_CREDENTIALS = {
         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
         "token_uri": "https://oauth2.googleapis.com/token",
         "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/interlinker%40interlink-deusto.iam.gserviceaccount.com"
+        "client_x509_cert_url": settings.GOOGLE_CLIENT_X509
     }
