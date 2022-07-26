@@ -32,7 +32,6 @@ def get_token_in_header(request):
 async def check_origin_is_backend(request):
     try:
         token = get_token_in_header(request)
-        print(token)
         if token != settings.BACKEND_SECRET:
             raise HTTPException(status_code=403)
         return

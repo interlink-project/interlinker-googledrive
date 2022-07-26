@@ -194,7 +194,7 @@ async def delete_asset(request: Request, id: str, collection: AsyncIOMotorCollec
         delete_file(service=service, id=id)
         delete_result = await crud.delete(collection, id)
         if delete_result.deleted_count == 1:
-            return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
+            return HTTPException(status_code=204)
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 

@@ -68,12 +68,7 @@ def copy_file(service, name, id):
 
 
 def delete_file(service, id):
-    try:
-        service.files().delete(fileId=id).execute()
-    except:
-        # always raises an error but it deletes anyway
-        pass
-
+    service.files().delete(fileId=id).execute()
 
 def set_public(service, file_id):
     user_permission = {
