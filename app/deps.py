@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Request
 import jwt
 from jwt import PyJWKClient
-
+from app.config import settings
 url = "https://aac.platform.smartcommunitylab.it/jwk"
 jwks_client = PyJWKClient(url)
 
@@ -25,10 +25,20 @@ def get_token_in_cookie(request):
 
 def get_token_in_header(request):
     try:
-        return request.headers.get('authorization').replace("Bearer ", "")
+        return request.headers.get('Authorization').replace("Bearer ", "") 
     except:
         return None
 
+async def check_origin_is_backend(request):
+    try:
+        token = get_token_in_header(request)
+        print(token)
+        if token != settings.BACKEND_SECRET:
+            raise HTTPException(status_code=403)
+        return
+    except Exception as e:
+        print(str(e))
+        raise HTTPException(status_code=403)
 
 def get_current_token(
     request: Request

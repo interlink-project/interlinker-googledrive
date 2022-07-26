@@ -68,7 +68,11 @@ def copy_file(service, name, id):
 
 
 def delete_file(service, id):
-    return service.files().delete(fileId=id).execute()
+    try:
+        service.files().delete(fileId=id).execute()
+    except:
+        # always raises an error but it deletes anyway
+        pass
 
 
 def set_public(service, file_id):

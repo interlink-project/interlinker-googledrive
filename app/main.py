@@ -186,13 +186,13 @@ async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_c
 
 
 @integrablerouter.delete("/assets/{id}", response_description="No content")
-async def delete_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), token=Depends(deps.get_token_in_header)):
-    if token != settings.BACKEND_SECRET:
-        raise HTTPException(status_code=403)
-
+async def delete_asset(request: Request, id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    await deps.check_origin_is_backend(request)
+    
+    # do not remove only_backend
     if await crud.get(collection, service, id) is not None:
         delete_file(service=service, id=id)
-        delete_result = await crud.delete(collection, service, id)
+        delete_result = await crud.delete(collection, id)
         if delete_result.deleted_count == 1:
             return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
 
