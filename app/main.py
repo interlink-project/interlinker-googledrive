@@ -37,6 +37,7 @@ from app.model import (
     mime_type_options,
     mime_types,
 )
+from googleapiclient.errors import HttpError
 
 domainfo = {
     "PROTOCOL": settings.PROTOCOL,
@@ -182,8 +183,14 @@ async def delete_asset(request: Request, id: str, collection: AsyncIOMotorCollec
     await deps.check_origin_is_backend(request)
     
     # do not remove only_backend
-    if await crud.get(collection, service, id) is not None:
-        delete_file(service=service, id=id)
+    
+    if await crud.get_only_db(collection, id) is not None:
+        try:
+            delete_file(service=service, id=id)
+        except HttpError as e:
+            # if not found, there is no need to delete it
+            if not e.status_code == 404:
+                raise e
         delete_result = await crud.delete(collection, id)
         if delete_result.deleted_count == 1:
             return HTTPException(status_code=204)
