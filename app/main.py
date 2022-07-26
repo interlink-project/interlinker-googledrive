@@ -129,25 +129,17 @@ async def persist_asset(id: str, collection: AsyncIOMotorCollection = Depends(ge
 # TODO: Task to remove unused files
 
 
-@customrouter.get("/clean")
-async def clean_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-    assets = await crud.get_all(collection, service)
-    for asset in assets:
-        delete_file(service, asset["_id"])
-        await crud.delete(collection, service, asset["_id"])
-    return JSONResponse(status_code=status.HTTP_200_OK)
-
-
 @customrouter.get("/files/real")
 async def get_real_assets(service=Depends(get_service)):
-    return JSONResponse(status_code=status.HTTP_200_OK, content=get_files(service))
+    nextPageToken, files = get_files(service, 1000)
+    return JSONResponse(status_code=status.HTTP_200_OK, content=files)
 
 
 @customrouter.get("/files/delete")
 async def delete_unused_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
     assets = await crud.get_all(collection, service)
     assets_ids = [asset["_id"] for asset in assets]
-    files = get_files(service)
+    nextPageToken, files = get_files(service)
     files_ids = [file["id"] for file in files]
     matches = [el for el in files_ids if el not in assets_ids]
     for id in matches:

@@ -6,14 +6,14 @@ import os
 from app.model import fields
 
 
-def get_files(service, pageSize=None):
+def get_files(service, pageSize=1000, pageToken=None):
     # https://developers.google.com/drive/api/v3/reference/files
     if pageSize:
         results = service.files().list(
-            pageSize=pageSize, fields=f"nextPageToken, files({fields})").execute()
+            pageSize=pageSize, pageToken=pageToken, fields=f"nextPageToken, files({fields})").execute()
     else:
         results = service.files().list(fields=f"files({fields})").execute()
-    return results.get('files', [])
+    return results.get('nextPageToken', None), results.get('files', [])
 
 
 def get_file_by_id(service, id):
@@ -100,10 +100,3 @@ def add_permission(service, email, role, file_id):
         body=user_permission,
         fields='id',
     ).execute()
-    
-def clean(service):
-    print("Syncing (cleaning)")
-    # Delete all files in drive that are not attached to any DriveAsset obj
-    for i in get_files(service):
-        delete_file(service, i["id"])
-    return get_files(service)
