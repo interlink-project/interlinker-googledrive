@@ -89,22 +89,18 @@ def get_permissions(service, file_id):
 def remove_permission(service, file_id, permission_id):
     return service.permissions().delete(fileId=file_id, permissionId=permission_id).execute()
 
-def add_permission(service, emails, role, file_id):
-    results = []
-    for email in emails:
-        user_permission = {
-                'type': 'user',
-                'role': role,
-                'emailAddress': email
-            }
-        perm = service.permissions().create(
-            fileId=file_id,
-            sendNotificationEmail=False,
-            body=user_permission,
-            fields='id',
-        ).execute()
-        results.append(perm)
-    return results
+def add_permission(service, email, role, file_id):
+    user_permission = {
+            'type': 'user',
+            'role': role,
+            'emailAddress': email
+        }
+    service.permissions().create(
+        fileId=file_id,
+        sendNotificationEmail=False,
+        body=user_permission,
+        fields='id',
+    ).execute()
     
 def clean(service):
     print("Syncing (cleaning)")

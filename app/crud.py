@@ -50,7 +50,7 @@ async def sync_users(collection, service, file_id, users_info):
 
     for user_entry in users_info:
         new_acl.append({
-            "id": user_entry.get("id"),
+            "user_id": user_entry.get("user_id"),
             "emails": user_entry.get("emails")
         })
 
@@ -64,7 +64,7 @@ async def sync_users(collection, service, file_id, users_info):
 async def get_files_for_user(collection, user_id):
     return await collection.find({
         "acl": {
-            "$elemMatch": {"id": user_id}}
+            "$elemMatch": {"user_id": user_id}}
         }
     ).to_list(1000)
 
@@ -81,7 +81,7 @@ async def update_file_permissions(service, file_id, acl):
         """
         [
             {
-                "id": ...
+                "user_id": ...
                 "emails": ...
             }
             ...
