@@ -157,7 +157,6 @@ async def create_asset(file: Optional[UploadFile] = File(...), collection: Async
     with open(file_name, 'wb+') as f:
         f.write(file.file.read())
         f.close()
-    print(f"File saved in {file_name}")
     # optional because needs confirmation
     return await crud.create(collection, service, file_name)
 

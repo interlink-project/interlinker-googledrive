@@ -22,7 +22,6 @@ async def common_create(collection, service, googlefile: dict, temporal=False):
         "acl": [],
         "temporal": temporal
     }
-    print(data)
     asset = jsonable_encoder(data)
     db_asset = await collection.insert_one(asset)
     return await get(collection, service, db_asset.inserted_id)
