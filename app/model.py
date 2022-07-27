@@ -8,6 +8,7 @@ fields = "id, name, webContentLink, webViewLink, thumbnailLink, version, mimeTyp
 
 mime_types = {
     "docs": "application/vnd.google-apps.document",
+    "spreadsheet": "application/vnd.google-apps.spreadsheet",
     "drawing": "application/vnd.google-apps.drawing",
     "file": "application/vnd.google-apps.file",
     "folder": "application/vnd.google-apps.folder",
