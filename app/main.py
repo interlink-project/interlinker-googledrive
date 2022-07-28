@@ -187,9 +187,7 @@ async def delete_asset(request: Request, id: str, collection: AsyncIOMotorCollec
         try:
             delete_file(service=service, id=id)
         except HttpError as e:
-            # if not found, there is no need to delete it
-            if not e.status_code == 404:
-                raise e
+            print(str(e))
         delete_result = await crud.delete(collection, id)
         if delete_result.deleted_count == 1:
             return HTTPException(status_code=204)
