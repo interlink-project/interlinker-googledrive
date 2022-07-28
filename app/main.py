@@ -186,7 +186,7 @@ async def delete_asset(request: Request, id: str, collection: AsyncIOMotorCollec
     if await crud.get_only_db(collection, id) is not None:
         try:
             delete_file(service=service, id=id)
-        except HttpError as e:
+        except Exception as e:
             print(str(e))
         delete_result = await crud.delete(collection, id)
         if delete_result.deleted_count == 1:
