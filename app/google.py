@@ -73,7 +73,7 @@ def delete_file(service, id):
 def set_public(service, file_id):
     user_permission = {
         'type': 'anyone',
-        'role': 'reader',
+        'role': 'writer',
     }
     perm = service.permissions().create(
         fileId=file_id,

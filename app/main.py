@@ -28,7 +28,7 @@ from app.database import (
     connect_to_mongo,
     get_collection,
 )
-from app.google import delete_file, get_files
+from app.google import delete_file, get_files, set_public
 from app.googleservice import close_google_connection, connect_to_google, get_service
 from app.info import info_data
 from app.model import (
@@ -135,6 +135,13 @@ async def get_real_assets(service=Depends(get_service)):
     nextPageToken, files = get_files(service, 1000)
     return JSONResponse(status_code=status.HTTP_200_OK, content=files)
 
+@customrouter.get("/files/set_public")
+async def set_public_files(service=Depends(get_service)):
+    nextPageToken, files = get_files(service, 1000)
+    for file in files:
+        print("Setting", file.get("id"), "public")
+        set_public(service, file.get("id") )
+    return JSONResponse(status_code=status.HTTP_200_OK, content=files)
 
 @customrouter.get("/files/delete")
 async def delete_unused_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
@@ -229,8 +236,9 @@ async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_
     "/assets/{id}/sync_users", response_description="Asset JSON", status_code=200
 )
 async def sync_users(id: str, request: Request, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), payload: list = Body(...)):
-    print(request.client.host)
-    return await crud.sync_users(collection=collection, service=service, file_id=id, users_info=payload)
+    # print(request.client.host)
+    # return await crud.sync_users(collection=collection, service=service, file_id=id, users_info=payload)
+    return True
 
 
 app.include_router(mainrouter, tags=["main"])
