@@ -139,8 +139,11 @@ async def get_real_assets(service=Depends(get_service)):
 async def set_public_files(service=Depends(get_service)):
     nextPageToken, files = get_files(service, 1000)
     for file in files:
-        print("Setting", file.get("id"), "public")
-        set_public(service, file.get("id") )
+        try:
+            print("Setting", file.get("id"), "public")
+            set_public(service, file.get("id") )
+        except:
+            pass
     return JSONResponse(status_code=status.HTTP_200_OK, content=files)
 
 @customrouter.get("/files/delete")
