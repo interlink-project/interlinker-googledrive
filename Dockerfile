@@ -1,16 +1,10 @@
-FROM python:3.9-slim as os-base
+FROM python:3.9-slim-buster as builder
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 RUN apt-get update
-RUN apt-get install -y curl libmagic1
-
-FROM os-base as poetry-base
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
-ENV PATH="/root/.poetry/bin:$PATH"
+RUN pip3 install poetry==1.2.0
+RUN apt-get install -y libmagic1
 RUN poetry config virtualenvs.create false
-RUN apt-get remove -y curl
-
-FROM poetry-base as builder
 WORKDIR /app/
 # Copy poetry.lock* in case it doesn't exist in the repo
 COPY ./pyproject.toml ./poetry.lock* /app/
