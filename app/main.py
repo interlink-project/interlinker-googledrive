@@ -181,7 +181,7 @@ async def instantiate_asset(request: Request):
 @integrablerouter.get(
     "/assets/{id}", response_description="Asset JSON", response_model=AssetBasicDataSchema
 )
-async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):#, user_id=Depends(deps.get_current_user_id)):
     if (asset := await crud.get(collection, service, id)) is not None:
         return asset
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
