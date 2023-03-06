@@ -66,6 +66,18 @@ def copy_file(service, name, id):
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
 
+def clone_file_readonly(service, name, id):
+    body = {}
+    if name:
+        body["name"] = name
+    try:
+        file = service.files().copy(
+            fileId=id, body=body, fields=fields).execute()
+        set_readonly(service, file["id"])
+        return file
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
 
 def delete_file(service, id):
     service.files().delete(fileId=id).execute()
@@ -74,6 +86,19 @@ def set_public(service, file_id):
     user_permission = {
         'type': 'anyone',
         'role': 'writer',
+    }
+    perm = service.permissions().create(
+        fileId=file_id,
+        body=user_permission,
+        fields='id',
+    ).execute()
+    return perm
+
+#Give just read permissions to a file:
+def set_readonly(service, file_id):
+    user_permission = {
+        'type': 'anyone',
+        'role': 'reader',
     }
     perm = service.permissions().create(
         fileId=file_id,

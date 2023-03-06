@@ -1,5 +1,5 @@
 from fastapi.encoders import jsonable_encoder
-from app.google import get_file_by_id, copy_file, create_empty_file, create_file, get_permissions , remove_permission, add_permission
+from app.google import clone_file_readonly,get_file_by_id, copy_file, create_empty_file, create_file, get_permissions , remove_permission, add_permission
 
 async def get_only_db(collection, id: str):
     return await collection.find_one({"_id": id})
@@ -33,6 +33,12 @@ async def create(collection, service, filepath: str):
 async def clone(collection, service, id: str):
     asset = await get(collection, service, id)
     googlefile = copy_file(service, "Copy of " + asset["name"], id)
+    return await common_create(collection, service, googlefile)
+
+#Just give read permissions:
+async def clone_readonly(collection, service, id: str):
+    asset = await get(collection, service, id)
+    googlefile = clone_file_readonly(service, "Clone " + asset["name"], id)
     return await common_create(collection, service, googlefile)
 
 async def create_empty(collection, service, mime: str, name: str):

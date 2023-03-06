@@ -234,6 +234,15 @@ async def clone_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_
 
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
+@integrablerouter.post(
+    "/assets/{id}/clone_for_catalogue", response_description="Asset JSON", status_code=201, response_model=AssetBasicDataSchema
+)
+async def clone_asset_for_catalogue(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+    if await crud.get(collection, service, id) is not None:
+        return await crud.clone_readonly(collection, service, id)
+
+    raise HTTPException(status_code=404, detail=f"Asset {id} not found")
+
 
 @integrablerouter.post(
     "/assets/{id}/sync_users", response_description="Asset JSON", status_code=200
