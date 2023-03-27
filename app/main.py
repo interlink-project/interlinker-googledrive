@@ -228,11 +228,12 @@ async def asset_viewer(id: str, collection: AsyncIOMotorCollection = Depends(get
 @integrablerouter.post(
     "/assets/{id}/clone", response_description="Asset JSON", status_code=201, response_model=AssetBasicDataSchema
 )
-async def clone_asset(id: str, justRead: bool=False, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+async def clone_asset(id: str, justRead: str='False', collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
     
     if await crud.get(collection, service, id) is not None:
-        if(justRead):
-            #Clone with read only assets:
+        if(justRead=='True'):
+            print('Cloning with just read option')
+            #Clone with read only assets (Used when publish in catalogue):
             return await crud.clone_readonly(collection, service, id)    
         else:
             return await crud.clone(collection, service, id)
