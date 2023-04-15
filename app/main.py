@@ -90,6 +90,7 @@ customrouter = APIRouter()
 
 @customrouter.post("/assets/empty", response_description="Asset JSON", status_code=201)
 async def create_empty_asset(asset_in: AssetCreateSchema, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    #print('-create empty asset function')
     mime_type = asset_in.mime_type
     name = asset_in.name
     if mime_type in mime_type_options:
@@ -103,6 +104,7 @@ async def create_empty_asset(asset_in: AssetCreateSchema, collection: AsyncIOMot
     "/assets", response_description="List all assets"
 )
 async def list_assets(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    #print('-lista los assets function')
     return await crud.get_all(collection, service)
 
 
@@ -110,6 +112,8 @@ async def list_assets(collection: AsyncIOMotorCollection = Depends(get_collectio
     "/assets/{id}", response_description="Asset JSON"
 )
 async def show_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    
+    #print('-show asset function')
     asset = await crud.get(collection, service, id)
     if asset is not None:
         return asset
@@ -121,6 +125,7 @@ async def show_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_c
     "/assets/{id}/persist", response_description="Persist a temporal asset"
 )
 async def persist_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    #print('-persist asset function')
     if (asset := await crud.get(collection, service, id)):
         if asset["temporal"]:
             return await crud.update(collection, service, id, {"temporal": False})
@@ -140,7 +145,7 @@ async def set_public_files(service=Depends(get_service)):
     nextPageToken, files = get_files(service, 1000)
     for file in files:
         try:
-            print("Setting", file.get("id"), "public")
+           #print("Setting", file.get("id"), "public")
             set_public(service, file.get("id") )
         except:
             pass
@@ -148,6 +153,7 @@ async def set_public_files(service=Depends(get_service)):
 
 @customrouter.get("/files/delete")
 async def delete_unused_files(collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    #print('-Delete the files function')
     assets = await crud.get_all(collection, service)
     assets_ids = [asset["_id"] for asset in assets]
     nextPageToken, files = get_files(service)
@@ -162,12 +168,18 @@ integrablerouter = APIRouter()
 
 @integrablerouter.post("/assets", response_description="Add new asset", status_code=201)
 async def create_asset(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
-
+    #print('-create asset function')
     file_name = os.getcwd()+"/tmp/"+file.filename.replace(" ", "-")
+    
+    #print('-the filename is')
+   #print(file_name)
+
     with open(file_name, 'wb+') as f:
         f.write(file.file.read())
         f.close()
     # optional because needs confirmation
+    #print('-Try ti save it in the server:')
+
     return await crud.create(collection, service, file_name)
 
 
@@ -182,6 +194,7 @@ async def instantiate_asset(request: Request):
     "/assets/{id}", response_description="Asset JSON", response_model=AssetBasicDataSchema
 )
 async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):#, user_id=Depends(deps.get_current_user_id)):
+    #print('-asset_data function')
     if (asset := await crud.get(collection, service, id)) is not None:
         return asset
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
@@ -189,6 +202,7 @@ async def asset_data(id: str, collection: AsyncIOMotorCollection = Depends(get_c
 
 @integrablerouter.delete("/assets/{id}", response_description="No content")
 async def delete_asset(request: Request, id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
+    #print('-Delete the file again')
     await deps.check_origin_is_backend(request)
     
     # do not remove only_backend
@@ -209,6 +223,7 @@ async def delete_asset(request: Request, id: str, collection: AsyncIOMotorCollec
     "/assets/{id}/download", response_description="Asset file"
 )
 async def download_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+    #print('-download asset function')
     if (asset := await crud.get(collection, service, id)) is not None:
         if "webContentLink" in asset:
             return RedirectResponse(url=asset["webContentLink"])
@@ -219,6 +234,7 @@ async def download_asset(id: str, collection: AsyncIOMotorCollection = Depends(g
     "/assets/{id}/view", response_description="GUI for interaction with asset"
 )
 async def asset_viewer(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
+    #print('-asset viewer function')
     asset = await crud.get(collection, service, id)
     if asset is not None:
         return RedirectResponse(url=asset["webViewLink"])
@@ -229,13 +245,26 @@ async def asset_viewer(id: str, collection: AsyncIOMotorCollection = Depends(get
     "/assets/{id}/clone", response_description="Asset JSON", status_code=201, response_model=AssetBasicDataSchema
 )
 async def clone_asset(id: str, justRead: str='False', collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
-    
-    if await crud.get(collection, service, id) is not None:
+    #print('-Clone asset function')
+    #print('-The value of justRead is:',justRead)
+    #print('-The id is:')
+   #print(id)
+    #print('-The collection is:')
+   #print(collection)
+    #print('-The service is:')
+   #print(service)
+
+   #print('-Trata de encontrarlo en la base de datos(debe estar para poder clonarlo)')
+    datosbyId=await crud.get_FileInfo(collection, service, id)
+   #print('-Los datos son: ',datosbyId)
+
+    if datosbyId is not None:
         if(justRead=='True'):
-            print('Cloning with just read option')
+           #print('-Cloning with just read option')
             #Clone with read only assets (Used when publish in catalogue):
             return await crud.clone_readonly(collection, service, id)    
         else:
+           #print('-Cloning with read and write options')
             return await crud.clone(collection, service, id)
             
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
@@ -246,6 +275,10 @@ async def clone_asset(id: str, justRead: str='False', collection: AsyncIOMotorCo
     "/assets/{id}/sync_users", response_description="Asset JSON", status_code=200
 )
 async def sync_users(id: str, request: Request, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), payload: list = Body(...)):
+   #print(request.client.host)
+   #print('-prefix')
+   #print(settings.API_V1_STR)
+    
     # print(request.client.host)
     # return await crud.sync_users(collection=collection, service=service, file_id=id, users_info=payload)
     return True

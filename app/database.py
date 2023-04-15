@@ -15,6 +15,11 @@ db = DataBase()
 
 
 async def get_collection() -> AsyncIOMotorCollection:
+   #print('this function is get_collection')
+   #print('the database name is:')
+   #print(settings.MONGODB_DATABASE)
+   #print('the collection name is:')
+   #print(settings.COLLECTION_NAME)
     return db.client[settings.MONGODB_DATABASE][settings.COLLECTION_NAME]
 
 

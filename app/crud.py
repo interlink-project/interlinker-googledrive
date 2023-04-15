@@ -5,12 +5,37 @@ async def get_only_db(collection, id: str):
     return await collection.find_one({"_id": id})
 
 async def get(collection, service, id: str):
+    
+   #print('- - Entra en el metodo get desde id')
+
     data = get_file_by_id(service, id)
+
+   #print('- - La data es: ', data)
+
+    
+  
+   #print('- - Ahora trata de encontrarlo en la base de datos')
     db_data = await collection.find_one({"_id": id})
+
     if not data or not db_data:
+       #print('- - No lo encuentra los datos!!')
         return None
     data["temporal"] = db_data["temporal"]
     data["acl"] = db_data.get("acl", [])
+    return data
+
+
+async def get_FileInfo(collection, service, id: str):
+    
+   #print('- - Entra en el metodo get desde id')
+
+    data = get_file_by_id(service, id)
+
+   #print('- - La data es: ', data)
+
+    data["temporal"] = True
+    data["acl"] = []
+
     return data
 
 async def get_all(collection, service):
@@ -27,16 +52,19 @@ async def common_create(collection, service, googlefile: dict, temporal=False):
     return await get(collection, service, db_asset.inserted_id)
 
 async def create(collection, service, filepath: str):
+   #print('- - Entra en el metodo create desde file')
     googlefile = create_file(service, filepath)
     return await common_create(collection, service, googlefile)
 
 async def clone(collection, service, id: str):
-    asset = await get(collection, service, id)
+   #print('- - Entra en el metodo clone desde id')
+    asset = await get_FileInfo(collection, service, id)
     googlefile = copy_file(service, "Copy of " + asset["name"], id)
     return await common_create(collection, service, googlefile)
 
 #Just give read permissions:
 async def clone_readonly(collection, service, id: str):
+   #print('- - Entra en el metodo clone read only desde id')
     asset = await get(collection, service, id)
     googlefile = clone_file_readonly(service, "Clone " + asset["name"], id)
     return await common_create(collection, service, googlefile)
@@ -50,7 +78,7 @@ async def update(collection, service, id: str, data):
     return await get(collection, service, id)
 
 async def sync_users(collection, service, file_id, users_info):
-    print("Syncing document users with", users_info)
+   #print("Syncing document users with", users_info)
     new_acl = []
 
     for user_entry in users_info:
@@ -74,7 +102,7 @@ async def get_files_for_user(collection, user_id):
     ).to_list(1000)
 
 async def update_file_permissions(service, file_id, acl):
-    print("Updating permissions of", file_id)
+   #print("Updating permissions of", file_id)
     # clear permissions
     permissions = get_permissions(service, file_id)
     for permission in permissions:

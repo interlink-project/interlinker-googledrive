@@ -4,6 +4,8 @@ from apiclient.http import MediaFileUpload
 import magic
 import os
 from app.model import fields
+from apiclient import errors
+
 
 
 def get_files(service, pageSize=1000, pageToken=None):
@@ -17,8 +19,30 @@ def get_files(service, pageSize=1000, pageToken=None):
 
 
 def get_file_by_id(service, id):
-    return service.files().get(fileId=id, fields=fields).execute()
+   #print('- - -Obtiene el archivo desde su id')
+   #print('- - -El id es: ', id)
+   #print('- - -los fields are: ', fields)
+   #print('- - -the service is:',service)
+   
+    try:
+        file = service.files().get(fileId=id, fields=fields).execute()
+       #print('- - -FileComplete::',file)
+       #print('- - -Name:',file['name'])
+        
+        
+        if(file['webViewLink']):
+           #print('- - -webViewLink:',file['webViewLink'])
+           pass
+        else:
+           #print('- - -WebContentLInk:',file['webContentLink'])
+           pass
+    except errors.HttpError as  error:
+        print ('An error occurred:',error)
 
+
+
+    #return service.files().get(fileId=id, fields=fields).execute()
+    return file
 
 def create_empty_file(service, mime_type, name):
     # TODO: if name contains extension, remove
