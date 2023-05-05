@@ -382,7 +382,7 @@ function App() {
             </Box>
             <Box sx={{ mt: 2 }}>
               <Typography align="center" color="textPrimary" variant="h3">
-                Asset created!
+                Resource created!
               </Typography>
             </Box>
             <Box sx={{ mt: 2 }}>
@@ -391,7 +391,7 @@ function App() {
                 color="textSecondary"
                 variant="subtitle1"
               >
-                The asset is now accessible for this task.
+                The resource is now accessible for this task.
               </Typography>
             </Box>
             <Box
@@ -406,7 +406,7 @@ function App() {
                 variant="contained"
                 href={`${basepath}/assets/${created.id}/view`}
               >
-                Open asset
+                Open resource
               </Button>
             </Box>
           </Box>
