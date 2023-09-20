@@ -38,6 +38,8 @@ from app.model import (
     mime_types,
 )
 from googleapiclient.errors import HttpError
+from fastapi.responses import StreamingResponse
+import io
 
 domainfo = {
     "PROTOCOL": settings.PROTOCOL,
@@ -223,11 +225,51 @@ async def delete_asset(request: Request, id: str, collection: AsyncIOMotorCollec
     "/assets/{id}/download", response_description="Asset file"
 )
 async def download_asset(id: str, collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service), user_id=Depends(deps.get_current_user_id)):
-    #print('-download asset function')
+    print('-download asset function')
     if (asset := await crud.get(collection, service, id)) is not None:
+        
+        #If the file dont have a webCOntentLink means that is a google drive file 
+        #it needs to be exported as a especific extension before download it.
+        print(asset)
         if "webContentLink" in asset:
+
             return RedirectResponse(url=asset["webContentLink"])
-        return JSONResponse({"error": "Could not download this resource. Try again later."})
+        
+        else:
+            print("This file don't have a webContentLink")
+            mime_type = asset.get('mimeType')
+            print(mime_type)
+            if mime_type:
+                export_mime_type = None
+                file_extension = None
+
+                if "application/vnd.google-apps.document" in mime_type:
+                    export_mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    file_extension = ".docx"
+                elif "application/vnd.google-apps.spreadsheet" in mime_type:
+                    export_mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    file_extension = ".xlsx"
+                elif "application/vnd.google-apps.presentation" in mime_type:
+                    export_mime_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                    file_extension = ".pptx"
+
+                if export_mime_type:
+                    request = service.files().export(fileId=id, mimeType=export_mime_type)
+                    response = request.execute()
+                    
+                    file_name = asset.get('name', 'file') + file_extension
+                    return StreamingResponse(content=io.BytesIO(response), headers={
+                        'Content-Disposition': f'attachment; filename="{file_name}"',
+                        'Content-Type': export_mime_type
+                    })
+                else:
+                    return JSONResponse({"error": "Unsupported file type"})
+            else:
+                return JSONResponse({"error": "Could not determine file MIME type"})
+                
+
+
+
     raise HTTPException(status_code=404, detail=f"Asset {id} not found")
 
 @integrablerouter.get(
