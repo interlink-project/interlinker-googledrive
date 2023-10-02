@@ -2,7 +2,7 @@ FROM python:3.9-slim-buster as builder
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 RUN apt-get update
-RUN pip3 install poetry==1.2.0
+RUN pip3 install poetry==1.6.1
 RUN apt-get install -y libmagic1
 RUN poetry config virtualenvs.create false
 WORKDIR /app/

@@ -40,6 +40,7 @@ from app.model import (
 from googleapiclient.errors import HttpError
 from fastapi.responses import StreamingResponse
 import io
+from .sharefilesbycode import MIME_TYPE_EXTENSION_MAP, download_file_from_drive_by_name,get_student_data
 
 domainfo = {
     "PROTOCOL": settings.PROTOCOL,
@@ -167,6 +168,34 @@ async def delete_unused_files(collection: AsyncIOMotorCollection = Depends(get_c
 
 integrablerouter = APIRouter()
 
+
+@customrouter.get("/download_student_resource/{folder_name}/{data_sheet_name}/{student_code}")
+async def download_student_resource(folder_name: str, data_sheet_name: str, student_code: str, user_id=Depends(deps.get_current_user_id)):
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        student_data = await get_student_data(folder_name, data_sheet_name, student_code)
+        childName = student_data['child_name']
+
+        pdf_name = f"{student_code}.pdf"
+        file_content = await download_file_from_drive_by_name(folder_name, pdf_name)
+        
+        file_extension = MIME_TYPE_EXTENSION_MAP.get(file_content["mime_type"], "")
+
+        # Ensure file name ends with the correct extension
+        if not file_content["file_name"].endswith(file_extension):
+            file_content["file_name"] += file_extension
+
+        # Use child name with spaces replaced by underscores for the file name
+        fileName = childName.replace(" ", "_") + file_extension
+
+        response = StreamingResponse(iter([file_content["data"]]), media_type="application/octet-stream")
+        response.headers["Content-Disposition"] = f"attachment; filename={fileName}"
+        return response
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An error occurred while processing your request.")
 
 @integrablerouter.post("/assets", response_description="Add new asset", status_code=201)
 async def create_asset(file: Optional[UploadFile] = File(...), collection: AsyncIOMotorCollection = Depends(get_collection), service=Depends(get_service)):
