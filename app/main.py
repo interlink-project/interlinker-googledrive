@@ -42,6 +42,10 @@ from fastapi.responses import StreamingResponse
 import io
 from .sharefilesbycode import MIME_TYPE_EXTENSION_MAP, download_file_from_drive_by_name,get_student_data
 
+import traceback
+import logging
+logger = logging.getLogger(__name__)
+
 domainfo = {
     "PROTOCOL": settings.PROTOCOL,
     "SERVER_NAME": settings.SERVER_NAME,
@@ -195,6 +199,9 @@ async def download_student_resource(folder_name: str, data_sheet_name: str, stud
         return response
 
     except Exception as e:
+
+        traceback_message = traceback.format_exc()
+        logger.error(traceback_message)
         raise HTTPException(status_code=500, detail="An error occurred while processing your request.")
 
 @integrablerouter.post("/assets", response_description="Add new asset", status_code=201)

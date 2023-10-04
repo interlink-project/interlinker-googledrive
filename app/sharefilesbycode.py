@@ -140,6 +140,10 @@ def find_student_data(downloaded_file_content, student_code):
 
 #Obtain the Student Data
 async def get_student_data(folder_name: str, file_name: str, student_code: str):
+
+    # Remove the file extension from the student code, if present
+    student_code = student_code.split('.')[0]
+    
     downloaded_file_content = await download_file_from_drive_by_name(folder_name, file_name)
 
     data = find_student_data(downloaded_file_content["data"], student_code)
